@@ -1,5 +1,16 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { supabase } from './supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('SUPABASE_URL or SUPABASE_ANON_KEY is missing. API calls to Supabase will fail.');
+}
+
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null as any;
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -28,7 +39,7 @@ async function getCloudinary() {
 }
 
 async function uploadFile(base64Data: string, filename: string, _fileType: string) {
-  const cld = getCloudinary();
+  const cld = await getCloudinary();
   if (cld) {
     try {
       const res = await cld.uploader.upload(base64Data, {
