@@ -53,9 +53,9 @@ export default function InteractiveMap({ kecamatanList, dataPotensialList, title
     // Custom Zoom Control at Top-Right
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Add high-performance beautiful map tiles (CartoDB Voyager)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       subdomains: 'abcd',
       maxZoom: 19
     }).addTo(map);
