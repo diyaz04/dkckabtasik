@@ -86,6 +86,9 @@ export default function InteractiveMap({ kecamatanList, dataPotensialList, title
     const points: L.LatLngTuple[] = [];
 
     kecamatanList.forEach((keca) => {
+      // Prevent Leaflet crash if coordinates are not yet set in the database
+      if (keca.latitude == null || keca.longitude == null) return;
+
       const { grandTotal } = getKecamatanStats(keca.id);
 
       // Scale marker size depending on total members
