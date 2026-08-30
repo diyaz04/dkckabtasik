@@ -573,7 +573,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-2 bg-white/25 border border-white/20 backdrop-blur rounded-full px-4 py-1.5 text-xs font-mono font-bold tracking-widest uppercase shadow-md"
             >
-              <span className="text-white text-base">⚜</span>
+              <img src="/logo.png" alt="Icon" className="w-4 h-4 object-contain" />
               {displayHero.badge_text}
             </motion.div>
 
@@ -617,10 +617,10 @@ export default function LandingPage() {
             </motion.div>
           </div>
 
-          {/* Graphical scout side visual (No generic AI image, clean scout emblem card) */}
+          {/* Graphical scout side visual */}
           <div className="lg:col-span-4 hidden lg:flex justify-center relative">
-            <div className="w-72 h-72 rounded-full border-4 border-white/30 p-4 bg-[#2b1d16]/30 backdrop-blur-md flex items-center justify-center shadow-2xl relative animate-pulse-slow">
-              <span className="text-white text-9xl">⚜</span>
+            <div className="w-72 h-72 rounded-full border-4 border-white/30 p-1 bg-white/10 backdrop-blur-md flex items-center justify-center shadow-2xl relative animate-pulse-slow overflow-hidden">
+              <img src="/hero-logo.jpg" alt="Logo Hero" className="w-full h-full object-cover rounded-full" />
               {/* Spinning circular logo badge text */}
               <div className="absolute inset-0 border border-white/10 rounded-full scale-110 pointer-events-none" />
               <div className="absolute inset-0 border border-brand-orange/20 rounded-full scale-120 pointer-events-none" />

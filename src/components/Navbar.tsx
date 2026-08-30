@@ -33,8 +33,8 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
           <Link to="/#top" className="flex items-center space-x-3 group">
-            <div className="w-12 h-12 bg-[#5C4033] rounded-full flex items-center justify-center border-2 border-brand-orange overflow-hidden p-1 shadow-md group-hover:rotate-12 transition-transform">
-              <span className="text-xl font-bold text-white">⚜</span>
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-brand-orange overflow-hidden p-0.5 shadow-md group-hover:rotate-12 transition-transform">
+              <img src="/logo.png" alt="Logo DKC" className="w-full h-full object-contain" />
             </div>
             <div>
               <span className="font-extrabold text-base tracking-tight block text-[#5C4033] uppercase leading-none group-hover:text-brand-orange transition-colors">

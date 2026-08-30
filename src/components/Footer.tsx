@@ -8,8 +8,8 @@ export default function Footer() {
         {/* Left Column - Org Branding */}
         <div>
           <div className="flex items-center space-x-3 mb-6">
-            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border-2 border-brand-orange overflow-hidden p-1.5 shadow-md">
-              <span className="text-2xl text-brand-orange">⚜</span>
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border-2 border-brand-orange overflow-hidden p-0.5 shadow-md">
+              <img src="/logo.png" alt="Logo DKC" className="w-full h-full object-contain" />
             </div>
             <div>
               <h3 className="font-extrabold text-lg text-white leading-tight">
@@ -23,8 +23,8 @@ export default function Footer() {
           <p className="text-sm text-gray-300 leading-relaxed mb-6">
             Wadah tertinggi bagi pembinaan Pramuka Penegak dan Pandega se-Kabupaten Tasikmalaya. Mengawal generasi muda yang tangguh, berkarakter luhur, dan mengabdi tiada batas.
           </p>
-          <div className="flex space-x-3 text-sm text-gray-400">
-            <span className="text-[#F5A623] font-extrabold">⚜</span>
+          <div className="flex space-x-3 text-sm text-gray-400 items-center">
+            <img src="/logo.png" alt="Icon" className="w-4 h-4 object-contain" />
             <span className="font-mono">Satyaku Kudarmakan, Darmaku Kubaktikan</span>
           </div>
         </div>
