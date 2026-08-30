@@ -82,8 +82,8 @@ export default function LoginPortal() {
         >
           {/* Logo & Heading */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-[#5C4033] rounded-full mx-auto flex items-center justify-center border-4 border-white shadow-md mb-4">
-              <Shield className="w-9 h-9 text-brand-orange" />
+            <div className="w-20 h-20 bg-white rounded-full mx-auto flex items-center justify-center border-4 border-white shadow-md mb-4 p-1 overflow-hidden">
+              <img src="/logo.png" alt="Logo DKC" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-xl font-black text-[#5C4033] tracking-tight uppercase">
               PORTAL INTERNAL
