@@ -170,6 +170,13 @@ export default function PortalAdmin() {
         setShowKlasemen(true);
       }
 
+      const laporanMenu = sc.find((item: any) => item.section_key === 'laporan_menu_visibility');
+      if (laporanMenu && laporanMenu.content) {
+        setShowLaporanMenu(laporanMenu.content.show_menu !== false);
+      } else {
+        setShowLaporanMenu(true);
+      }
+
       const pangkalan = await fetch('/api/pangkalan').then(r => r.json());
       setPangkalanList(pangkalan);
 
@@ -236,6 +243,29 @@ export default function PortalAdmin() {
         setSiteContent(updatedSc);
       } else {
         alert('Gagal memperbarui pengaturan klasemen.');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Toggle Menu Laporan DKR
+  const handleToggleLaporanMenu = async (val: boolean) => {
+    try {
+      const res = await fetch('/api/site_content/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section_key: 'laporan_menu_visibility',
+          content: { show_menu: val }
+        })
+      });
+      if (res.ok) {
+        setShowLaporanMenu(val);
+        const updatedSc = await fetch('/api/site_content').then(r => r.json());
+        setSiteContent(updatedSc);
+      } else {
+        alert('Gagal memperbarui pengaturan visibilitas menu laporan.');
       }
     } catch (err) {
       console.error(err);
@@ -2579,6 +2609,40 @@ export default function PortalAdmin() {
                   ) : (
                     <>
                       <X className="w-4 h-4" /> Sembunyi dari Landingpage
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Aksi Visibilitas Menu Laporan Toggle Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 mt-6">
+              <div className="space-y-1">
+                <h3 className="text-sm font-extrabold text-brand-brown-dark flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-[#0E9F6E]" />
+                  Visibilitas Menu Laporan di Dashboard DKR
+                </h3>
+                <p className="text-xs text-gray-500 max-w-xl">
+                  Atur apakah menu "Laporan 02GP & 01 Diklat" dapat diakses oleh DKR di dashboard mereka. Gunakan ini untuk menonaktifkan fitur pelaporan sementara waktu.
+                </p>
+              </div>
+
+              <div>
+                <button
+                  onClick={() => handleToggleLaporanMenu(!showLaporanMenu)}
+                  className={`w-full md:w-auto px-5 py-3 rounded-2xl font-black font-mono text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    showLaporanMenu
+                      ? 'bg-brand-orange hover:bg-orange-500 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                  }`}
+                >
+                  {showLaporanMenu ? (
+                    <>
+                      <Check className="w-4 h-4" /> Menu Laporan (Aktif)
+                    </>
+                  ) : (
+                    <>
+                      <X className="w-4 h-4" /> Menu Disembunyikan
                     </>
                   )}
                 </button>

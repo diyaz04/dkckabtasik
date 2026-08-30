@@ -63,6 +63,9 @@ export default function PortalDkr() {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
+  
+  // Settings from admin
+  const [showLaporanMenu, setShowLaporanMenu] = useState(true);
 
   // Laporan Kegiatan 02GP & 01 DIKLAT States
   const [laporanList, setLaporanList] = useState<LaporanKegiatan[]>([]);
@@ -147,8 +150,25 @@ export default function PortalDkr() {
         setLaporanList(lapData.filter((l: any) => l.kecamatan_id === kecaObj.id));
       }
       setLaporanLoading(false);
+
+      // Fetch site settings
+      const scRes = await fetch('/api/site_content');
+      if (scRes.ok) {
+        const scData = await scRes.json();
+        const laporanMenu = scData.find((item: any) => item.section_key === 'laporan_menu_visibility');
+        if (laporanMenu && laporanMenu.content) {
+          try {
+            const parsed = JSON.parse(laporanMenu.content);
+            setShowLaporanMenu(parsed.show_menu !== false);
+          } catch (e) {
+            setShowLaporanMenu(true);
+          }
+        }
+      }
+      
     } catch (e) {
       console.error(e);
+    } finally {
       setLaporanLoading(false);
     }
   };
@@ -630,14 +650,16 @@ export default function PortalDkr() {
 
           <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
 
-          <button 
-            onClick={() => setActiveTab('laporan')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'laporan' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" /> Laporan 02GP/01
-          </button>
+          {showLaporanMenu && (
+            <button 
+              onClick={() => setActiveTab('laporan')}
+              className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
+                activeTab === 'laporan' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" /> Laporan 02GP/01
+            </button>
+          )}
           <button 
             onClick={() => setActiveTab('password')}
             className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
@@ -722,14 +744,16 @@ export default function PortalDkr() {
 
           {/* Kategori: LAPORAN & AKUN */}
           <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Laporan &amp; Akun</p>
-          <button 
-            onClick={() => setActiveTab('laporan')}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
-              activeTab === 'laporan' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <Award className="w-4 h-4 text-[#FF7043]" /> Laporan 02GP & 01 Diklat
-          </button>
+          {showLaporanMenu && (
+            <button 
+              onClick={() => setActiveTab('laporan')}
+              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+                activeTab === 'laporan' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Award className="w-4 h-4 text-[#FF7043]" /> Laporan 02GP & 01 Diklat
+            </button>
+          )}
 
           <button 
             onClick={() => setActiveTab('password')}
