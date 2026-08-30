@@ -56,6 +56,7 @@ export default function PortalAdmin() {
   const [laporanSubTab, setLaporanSubTab] = useState<'pending' | 'verified'>('pending');
   const [expandedLaporanId, setExpandedLaporanId] = useState<string | null>(null);
   const [showKlasemen, setShowKlasemen] = useState<boolean>(true);
+  const [showLaporanMenu, setShowLaporanMenu] = useState<boolean>(true);
 
   // Editor states (News)
   const [newsTitle, setNewsTitle] = useState('');
