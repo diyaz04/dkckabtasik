@@ -1,0 +1,6 @@
+{
+  "name": "DKC Pramuka Kabupaten Tasikmalaya",
+  "description": "Website resmi dan portal internal Dewan Kerja Cabang Gerakan Pramuka Kabupaten Tasikmalaya.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
