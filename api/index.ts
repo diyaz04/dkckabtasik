@@ -3,13 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn('SUPABASE_URL or SUPABASE_ANON_KEY is missing. API calls to Supabase will fail.');
 }
 
-const supabase = supabaseUrl && supabaseKey
+export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
+  : null as any;
+
+export const supabaseAdmin = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
   : null as any;
 
 const app = express();
@@ -688,8 +693,48 @@ app.get('/api/users', async (_req: Request, res: Response) => {
   }
 });
 
-app.post('/api/users/save', async (_req: Request, res: Response) => {
-  res.json({ success: true });
+app.post('/api/users/save', async (req: Request, res: Response) => {
+  try {
+    const { email, password, role, kecamatan_id, saka_id, nama } = req.body;
+    
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum diatur di Vercel.' });
+    }
+
+    // 1. Create User in Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true
+    });
+
+    if (authError) {
+      return res.status(400).json({ error: authError.message });
+    }
+
+    if (!authData.user) {
+      return res.status(500).json({ error: 'Gagal membuat user di Supabase Auth' });
+    }
+
+    // 2. Insert Profile
+    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+      user_id: authData.user.id,
+      role,
+      kecamatan_id,
+      saka_id,
+      nama
+    });
+
+    if (profileError) {
+      // Rollback (delete auth user if profile fails)
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      return res.status(400).json({ error: profileError.message });
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ── Laporan Kegiatan ──
