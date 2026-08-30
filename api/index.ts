@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express, { Request, Response } from 'express';
 import { supabase } from './supabaseClient';
 import { uploadFile, uploadToUploadcare } from '../server/services/uploadService';
@@ -5,6 +6,10 @@ import { uploadFile, uploadToUploadcare } from '../server/services/uploadService
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'API is running', supabaseConfigured: !!process.env.SUPABASE_URL });
+});
 
 app.post('/api/auth/login', async (req: Request, res: Response) => {
   try {
@@ -502,6 +507,11 @@ app.post('/api/laporan_kegiatan/process', async (req: Request, res: Response) =>
   const { data } = await supabase.from('laporan_kegiatan').update(updateData).eq('id', id).select().single();
   if (!data) return res.status(404).json({ error: 'Laporan tidak ditemukan' });
   res.json({ success: true, data });
+});
+
+app.use((err: any, req: Request, res: Response, next: any) => {
+  console.error("Express Error:", err);
+  res.status(500).json({ error: err.message || 'Server crashed' });
 });
 
 export default app;
