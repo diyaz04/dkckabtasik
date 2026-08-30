@@ -7,19 +7,21 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── Upload helpers (inlined to avoid cross-folder imports that break Vercel) ──
 let cloudinaryInstance: any = null;
-function getCloudinary() {
+async function getCloudinary() {
   if (cloudinaryInstance) return cloudinaryInstance;
   try {
     const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } = process.env;
     if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
-      // dynamic import would be cleaner but cloudinary v2 works fine with require-style
-      const cloudinary = require('cloudinary').v2;
-      cloudinary.config({
-        cloud_name: CLOUDINARY_CLOUD_NAME,
-        api_key: CLOUDINARY_API_KEY,
-        api_secret: CLOUDINARY_API_SECRET,
-      });
-      cloudinaryInstance = cloudinary;
+      const mod = await import('cloudinary');
+      const cloudinary = mod.v2 || (mod as any).default?.v2;
+      if (cloudinary) {
+        cloudinary.config({
+          cloud_name: CLOUDINARY_CLOUD_NAME,
+          api_key: CLOUDINARY_API_KEY,
+          api_secret: CLOUDINARY_API_SECRET,
+        });
+        cloudinaryInstance = cloudinary;
+      }
     }
   } catch (_) { /* cloudinary not available */ }
   return cloudinaryInstance;
