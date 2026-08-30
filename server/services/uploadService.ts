@@ -4,10 +4,16 @@ import fs from 'fs';
 import path from 'path';
 
 // Local storage fallback settings
-const DATA_DIR = path.join(process.cwd(), 'data');
+// On Vercel, process.cwd() is read-only, use /tmp instead
+const isVercel = process.env.VERCEL === '1';
+const DATA_DIR = isVercel ? path.join('/tmp', 'data') : path.join(process.cwd(), 'data');
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+try {
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn("Could not create uploads directory (might be read-only FS):", e);
 }
 
 // Lazy initialization helpers
