@@ -763,6 +763,7 @@ app.post('/api/laporan_kegiatan/save', async (req: Request, res: Response) => {
         tempat_pelaksanaan: data.tempat_pelaksanaan,
         deskripsi_singkat: data.deskripsi_singkat,
         file_laporan_url: data.file_laporan_url,
+        form_data: data.form_data,
         status: 'pending'
       }).eq('id', data.id).select().single();
       updatedReport = ret;
@@ -776,6 +777,7 @@ app.post('/api/laporan_kegiatan/save', async (req: Request, res: Response) => {
         tempat_pelaksanaan: data.tempat_pelaksanaan,
         deskripsi_singkat: data.deskripsi_singkat,
         file_laporan_url: data.file_laporan_url || '',
+        form_data: data.form_data,
         status: 'pending'
       }).select().single();
       updatedReport = ret;

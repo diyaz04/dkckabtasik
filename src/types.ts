@@ -171,6 +171,7 @@ export interface LaporanKegiatan {
   tempat_pelaksanaan: string;
   deskripsi_singkat: string;
   file_laporan_url: string;
+  form_data?: any;
   status: 'pending' | 'diterima' | 'ditolak' | 'revisi';
   catatan_admin?: string;
   point_bobot?: number;

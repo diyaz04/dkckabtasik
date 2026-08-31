@@ -10,6 +10,10 @@ import {
 } from '../types';
 import { compressAndUploadFile } from '../utils/imageUpload';
 
+import LaporanFormGenerator from './LaporanFormGenerator';
+import LaporanPdfTemplate from './LaporanPdfTemplate';
+import html2pdf from 'html2pdf.js';
+
 export default function PortalDkr() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan'>('dashboard');
@@ -217,12 +221,35 @@ export default function PortalDkr() {
     }
   };
 
+  const handleDownloadPdf = (laporan: LaporanKegiatan) => {
+    const element = document.getElementById(`pdf-laporan-${laporan.id}`);
+    if (!element) {
+      alert("Template PDF belum dimuat.");
+      return;
+    }
+    
+    // Temporarily make it visible to render properly
+    element.style.display = 'block';
+    
+    const opt = {
+      margin:       0,
+      filename:     `Laporan_${laporan.jenis_dokumen}_${laporan.nama_kegiatan.replace(/\s+/g, '_')}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      element.style.display = 'none';
+    });
+  };
+
   // Save / Update Laporan 02GP or 01DIKLAT
-  const handleSaveLaporan = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveLaporan = async (formData: any) => {
     if (!kecamatan) return;
     setLaporanSaving(true);
     try {
+      const { kegiatanData, kesimpulan } = formData;
       const res = await fetch('/api/laporan_kegiatan/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -231,28 +258,25 @@ export default function PortalDkr() {
           kecamatan_id: kecamatan.id,
           kecamatan_nama: kecamatan.nama_kecamatan,
           jenis_dokumen: laporanJenis,
-          nama_kegiatan: laporanNamaKegiatan,
-          tanggal_pelaksanaan: laporanTanggal,
-          tempat_pelaksanaan: laporanTempat,
-          deskripsi_singkat: laporanDeskripsi,
-          file_laporan_url: laporanFileUrl
+          nama_kegiatan: kegiatanData.nama || 'Laporan Kegiatan',
+          tanggal_pelaksanaan: kegiatanData.waktu || new Date().toISOString().split('T')[0],
+          tempat_pelaksanaan: kegiatanData.tempat || '-',
+          deskripsi_singkat: kesimpulan || 'Deskripsi otomatis dari form',
+          file_laporan_url: '', // We don't use this anymore, we generate PDF
+          form_data: formData
         })
       });
       if (res.ok) {
         alert(laporanEditingId ? 'Laporan berhasil direvisi/diperbarui!' : 'Laporan kegiatan berhasil dilaporkan!');
         setShowLaporanForm(false);
         setLaporanEditingId(null);
-        setLaporanNamaKegiatan('');
-        setLaporanTanggal('');
-        setLaporanTempat('');
-        setLaporanDeskripsi('');
-        setLaporanFileUrl('');
         loadDkrData();
       } else {
         alert('Gagal menyimpan pelaporan kegiatan.');
       }
     } catch (err) {
       console.error(err);
+      alert('Terjadi kesalahan.');
     } finally {
       setLaporanSaving(false);
     }
@@ -1459,116 +1483,13 @@ export default function PortalDkr() {
               </div>
             </div>
 
-            {/* Form Laporan (Conditional) */}
             {showLaporanForm && (
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md space-y-6">
-                <div className="flex items-center justify-between border-b pb-3">
-                  <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight uppercase font-mono">
-                    {laporanEditingId ? '📝 Edit/Revisi Laporan Kegiatan' : '🚀 Formulir Pelaporan Baru'}
-                  </h3>
-                  <button
-                    onClick={() => setShowLaporanForm(false)}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <form onSubmit={handleSaveLaporan} className="space-y-5 text-xs font-mono">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Jenis Pelaporan</label>
-                      <select
-                        value={laporanJenis}
-                        onChange={(e) => setLaporanJenis(e.target.value as any)}
-                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-bold focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
-                      >
-                        <option value="02GP">02GP (Laporan Kegiatan Umum Ranting)</option>
-                        <option value="01DIKLAT">01 DIKLAT (Pendidikan & Pelatihan Kepemimpinan/Teknis)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nama Kegiatan</label>
-                      <input
-                        type="text" required value={laporanNamaKegiatan} onChange={(e) => setLaporanNamaKegiatan(e.target.value)}
-                        placeholder="Contoh: Sidang Paripurna Ranting Kwarran Singaparna 2026"
-                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tanggal Pelaksanaan</label>
-                      <input
-                        type="date" required value={laporanTanggal} onChange={(e) => setLaporanTanggal(e.target.value)}
-                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tempat Pelaksanaan</label>
-                      <input
-                        type="text" required value={laporanTempat} onChange={(e) => setLaporanTempat(e.target.value)}
-                        placeholder="Contoh: Sanggar Bakti Pramuka Kwarran"
-                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Ringkasan Deskripsi Hasil Kegiatan</label>
-                    <textarea
-                      required rows={3} value={laporanDeskripsi} onChange={(e) => setLaporanDeskripsi(e.target.value)}
-                      placeholder="Tuliskan ringkasan singkat jalannya kegiatan, jumlah peserta yang hadir, serta hasil yang dicapai..."
-                      className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
-                    />
-                  </div>
-
-                  <div className="p-4 bg-slate-50 border border-slate-200 border-dashed rounded-2xl space-y-3">
-                    <label className="block text-[10px] font-bold text-gray-500 uppercase">Lampiran Berkas Laporan (PDF / Gambar / Docx)</label>
-                    <div className="flex flex-col sm:flex-row items-center gap-3">
-                      <input
-                        type="file"
-                        onChange={handleLaporanUpload}
-                        accept=".pdf,.doc,.docx,image/*"
-                        className="text-xs file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-mono file:bg-brand-green/10 file:text-brand-green hover:file:bg-brand-green/20"
-                      />
-                      <span className="text-gray-400 text-[10px]">Atau masukkan link dokumen laporan:</span>
-                      <input
-                        type="text"
-                        placeholder="https://drive.google.com/..."
-                        value={laporanFileUrl}
-                        onChange={(e) => setLaporanFileUrl(e.target.value)}
-                        className="flex-1 bg-white border border-slate-200/80 rounded-xl px-4 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-1 focus:ring-[#0E9F6E]/10"
-                      />
-                    </div>
-                    {laporanFileUrl && (
-                      <p className="text-[10px] text-brand-green font-bold flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> Berkas Terlampir: <span className="underline break-all">{laporanFileUrl}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowLaporanForm(false)}
-                      className="px-5 py-3 border border-slate-200 text-gray-500 font-bold rounded-xl hover:bg-gray-50"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={laporanSaving}
-                      className="px-6 py-3 bg-[#D35400] hover:bg-[#E67E22] text-white font-extrabold rounded-xl shadow"
-                    >
-                      {laporanSaving ? 'Menyimpan...' : 'Kirim Pelaporan'}
-                    </button>
-                  </div>
-                </form>
-              </div>
+              <LaporanFormGenerator
+                jenisDokumen={laporanJenis}
+                onSave={handleSaveLaporan}
+                onCancel={() => setShowLaporanForm(false)}
+                isLoading={laporanSaving}
+              />
             )}
 
             {/* List of Laporan */}
@@ -1655,18 +1576,25 @@ export default function PortalDkr() {
                       )}
 
                       <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-50 flex-wrap">
-                        {lap.file_laporan_url ? (
-                          <a
-                            href={lap.file_laporan_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] font-bold font-mono text-brand-green hover:underline flex items-center gap-1.5 uppercase"
+                        <div className="flex gap-2 items-center">
+                          <button
+                            onClick={() => handleDownloadPdf(lap)}
+                            className="bg-brand-green hover:bg-[#0E9F6E] text-white font-extrabold font-mono text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition-all"
                           >
-                            <FileSpreadsheet className="w-4 h-4 shrink-0" /> Lihat Berkas Laporan
-                          </a>
-                        ) : (
-                          <span className="text-[10px] text-gray-400 italic font-mono">Tidak ada lampiran berkas</span>
-                        )}
+                            <FileText className="w-3.5 h-3.5" /> Download PDF
+                          </button>
+
+                          {lap.file_laporan_url && (
+                            <a
+                              href={lap.file_laporan_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-bold font-mono text-brand-green hover:underline flex items-center gap-1.5 uppercase ml-2"
+                            >
+                              <FileSpreadsheet className="w-4 h-4 shrink-0" /> Lihat Lampiran
+                            </a>
+                          )}
+                        </div>
 
                         {/* Revision Trigger */}
                         {lap.status === 'revisi' && (
@@ -1677,6 +1605,11 @@ export default function PortalDkr() {
                             <Edit3 className="w-3.5 h-3.5" /> Revisi Laporan Sekarang
                           </button>
                         )}
+                      </div>
+
+                      {/* Hidden PDF Template Container */}
+                      <div style={{ display: 'none' }}>
+                        <LaporanPdfTemplate laporan={lap} profileDkr={dkrProfile} />
                       </div>
                     </div>
                   ))}
