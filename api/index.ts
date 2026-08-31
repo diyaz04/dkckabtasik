@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { v2 as cloudinary } from 'cloudinary';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
