@@ -764,7 +764,7 @@ app.post('/api/laporan_kegiatan/save', async (req: Request, res: Response) => {
         deskripsi_singkat: data.deskripsi_singkat,
         file_laporan_url: data.file_laporan_url,
         form_data: data.form_data,
-        status: 'pending'
+        status: data.status || 'pending'
       }).eq('id', data.id).select().single();
       updatedReport = ret;
     } else {
@@ -778,7 +778,7 @@ app.post('/api/laporan_kegiatan/save', async (req: Request, res: Response) => {
         deskripsi_singkat: data.deskripsi_singkat,
         file_laporan_url: data.file_laporan_url || '',
         form_data: data.form_data,
-        status: 'pending'
+        status: data.status || 'pending'
       }).select().single();
       updatedReport = ret;
     }

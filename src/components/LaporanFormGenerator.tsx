@@ -6,13 +6,14 @@ interface LaporanFormGeneratorProps {
   jenisDokumen: '02GP' | '01DIKLAT';
   onJenisDokumenChange?: (jenis: '02GP' | '01DIKLAT') => void;
   initialData?: any;
-  onSave: (formData: any) => void;
+  onSave: (formData: any, isDraft?: boolean) => Promise<void>;
   onCancel: () => void;
   isLoading: boolean;
 }
 
 export default function LaporanFormGenerator({ jenisDokumen, onJenisDokumenChange, initialData, onSave, onCancel, isLoading }: LaporanFormGeneratorProps) {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(initialData ? 1 : 1); // Wait, we can just start at 1
+  const [autoSaveLoading, setAutoSaveLoading] = useState(false);
   
   // -- State untuk form data
   const [kegiatanData, setKegiatanData] = useState(initialData?.kegiatanData || { nama: '', waktu: '', tempat: '' });
@@ -79,6 +80,29 @@ export default function LaporanFormGenerator({ jenisDokumen, onJenisDokumenChang
     onSave({
       kegiatanData, pelaksanaKetua, bentukBadan, personilPa, personilPi, peserta, anggaran, sumbanganLain, kesimpulan, saran, ttdKota, ttdTanggal, ttdPanitia, dokumentasi
     });
+  };
+
+  const handleNext = async () => {
+    if (step === 1) {
+      if (!kegiatanData.nama || !kegiatanData.waktu || !kegiatanData.tempat) {
+        alert('Mohon lengkapi Nama Kegiatan, Waktu, dan Tempat Pelaksanaan.');
+        return;
+      }
+    }
+    
+    // Auto save draft
+    setAutoSaveLoading(true);
+    try {
+      await onSave({
+        kegiatanData, pelaksanaKetua, bentukBadan, personilPa, personilPi, peserta, anggaran, sumbanganLain, kesimpulan, saran, ttdKota, ttdTanggal, ttdPanitia, dokumentasi
+      }, true); // isDraft = true
+      setStep(step + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Gagal auto-save draf, silakan coba lagi.');
+    } finally {
+      setAutoSaveLoading(false);
+    }
   };
 
   return (
@@ -324,10 +348,11 @@ export default function LaporanFormGenerator({ jenisDokumen, onJenisDokumenChang
         
         {step < 5 ? (
           <button 
-            onClick={() => setStep(step + 1)}
-            className="px-6 py-2 text-sm font-bold text-white bg-brand-green hover:bg-[#10B981] rounded-xl transition-all flex items-center gap-2"
+            onClick={handleNext}
+            disabled={autoSaveLoading}
+            className="px-6 py-2 text-sm font-bold text-white bg-brand-green hover:bg-[#10B981] rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
           >
-            Selanjutnya <ChevronRight className="w-4 h-4" />
+            {autoSaveLoading ? 'Menyimpan Draf...' : 'Selanjutnya'} <ChevronRight className="w-4 h-4" />
           </button>
         ) : (
           <button 

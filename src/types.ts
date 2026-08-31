@@ -172,7 +172,7 @@ export interface LaporanKegiatan {
   deskripsi_singkat: string;
   file_laporan_url: string;
   form_data?: any;
-  status: 'pending' | 'diterima' | 'ditolak' | 'revisi';
+  status: 'draft' | 'pending' | 'diterima' | 'ditolak' | 'revisi';
   catatan_admin?: string;
   point_bobot?: number;
   created_at: string;

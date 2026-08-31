@@ -82,6 +82,7 @@ export default function PortalDkr() {
   const [laporanDeskripsi, setLaporanDeskripsi] = useState('');
   const [laporanFileUrl, setLaporanFileUrl] = useState('');
   const [laporanEditingId, setLaporanEditingId] = useState<string | null>(null);
+  const [laporanFormData, setLaporanFormData] = useState<any>(null);
   const [laporanSaving, setLaporanSaving] = useState(false);
 
   // Template Generator States
@@ -245,7 +246,7 @@ export default function PortalDkr() {
   };
 
   // Save / Update Laporan 02GP or 01DIKLAT
-  const handleSaveLaporan = async (formData: any) => {
+  const handleSaveLaporan = async (formData: any, isDraft?: boolean) => {
     if (!kecamatan) return;
     setLaporanSaving(true);
     try {
@@ -263,20 +264,31 @@ export default function PortalDkr() {
           tempat_pelaksanaan: kegiatanData.tempat || '-',
           deskripsi_singkat: kesimpulan || 'Deskripsi otomatis dari form',
           file_laporan_url: '', // We don't use this anymore, we generate PDF
-          form_data: formData
+          form_data: formData,
+          status: isDraft ? 'draft' : (laporanEditingId ? undefined : 'pending') // if editing, keep current status unless draft. Wait, actually if not draft, make it pending if it was draft
         })
       });
       if (res.ok) {
-        alert(laporanEditingId ? 'Laporan berhasil direvisi/diperbarui!' : 'Laporan kegiatan berhasil dilaporkan!');
-        setShowLaporanForm(false);
-        setLaporanEditingId(null);
-        loadDkrData();
+        const resultData = await res.json();
+        // If it was a new draft, we need to set the editing ID so the next steps update the same draft!
+        if (isDraft && !laporanEditingId && resultData.data?.id) {
+          setLaporanEditingId(resultData.data.id);
+        }
+
+        if (!isDraft) {
+          alert(laporanEditingId ? 'Laporan berhasil direvisi/diperbarui!' : 'Laporan kegiatan berhasil dilaporkan!');
+          setShowLaporanForm(false);
+          setLaporanEditingId(null);
+          loadDkrData();
+        }
       } else {
-        alert('Gagal menyimpan pelaporan kegiatan.');
+        if (!isDraft) alert('Gagal menyimpan pelaporan kegiatan.');
+        else throw new Error('Gagal auto-save');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan.');
+      if (!isDraft) alert('Terjadi kesalahan.');
+      else throw err; // Pass error up to form generator
     } finally {
       setLaporanSaving(false);
     }
@@ -285,11 +297,7 @@ export default function PortalDkr() {
   const handleEditLaporan = (lap: LaporanKegiatan) => {
     setLaporanEditingId(lap.id);
     setLaporanJenis(lap.jenis_dokumen);
-    setLaporanNamaKegiatan(lap.nama_kegiatan);
-    setLaporanTanggal(lap.tanggal_pelaksanaan);
-    setLaporanTempat(lap.tempat_pelaksanaan);
-    setLaporanDeskripsi(lap.deskripsi_singkat);
-    setLaporanFileUrl(lap.file_laporan_url);
+    setLaporanFormData(lap.form_data);
     setShowLaporanForm(true);
   };
 
@@ -1418,11 +1426,7 @@ export default function PortalDkr() {
                 <button
                   onClick={() => {
                     setLaporanEditingId(null);
-                    setLaporanNamaKegiatan('');
-                    setLaporanTanggal('');
-                    setLaporanTempat('');
-                    setLaporanDeskripsi('');
-                    setLaporanFileUrl('');
+                    setLaporanFormData(null);
                     setShowLaporanForm(true);
                   }}
                   className="bg-[#D35400] hover:bg-[#E67E22] text-white font-extrabold font-mono text-xs px-4 py-2.5 rounded-xl shadow transition-all flex items-center gap-1.5 cursor-pointer"
@@ -1479,8 +1483,10 @@ export default function PortalDkr() {
 
             {showLaporanForm && (
               <LaporanFormGenerator
+                key={laporanEditingId || 'new'}
                 jenisDokumen={laporanJenis}
                 onJenisDokumenChange={setLaporanJenis}
+                initialData={laporanFormData}
                 onSave={handleSaveLaporan}
                 onCancel={() => setShowLaporanForm(false)}
                 isLoading={laporanSaving}
@@ -1537,8 +1543,14 @@ export default function PortalDkr() {
                           )}
                           {lap.status === 'pending' && (
                             <div className="flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-bold font-mono">
-                              <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                              <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
                               <span>MENUNGGU VERIFIKASI</span>
+                            </div>
+                          )}
+                          {lap.status === 'draft' && (
+                            <div className="flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[10px] font-bold font-mono">
+                              <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
+                              <span>DRAF (BELUM SELESAI)</span>
                             </div>
                           )}
                         </div>
@@ -1546,14 +1558,14 @@ export default function PortalDkr() {
 
                       <div className="space-y-1">
                         <h4 className="font-extrabold text-sm text-slate-800 tracking-tight uppercase leading-snug">
-                          {lap.nama_kegiatan}
+                          {lap.nama_kegiatan || 'Draf Laporan Kegiatan'}
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] text-gray-500 font-mono">
-                          <p>📅 Pelaksanaan: <strong>{new Date(lap.tanggal_pelaksanaan).toLocaleDateString('id-ID')}</strong></p>
-                          <p>📍 Tempat: <strong>{lap.tempat_pelaksanaan}</strong></p>
+                          <p>📅 Pelaksanaan: <strong>{lap.tanggal_pelaksanaan ? new Date(lap.tanggal_pelaksanaan).toLocaleDateString('id-ID') : '-'}</strong></p>
+                          <p>📍 Tempat: <strong>{lap.tempat_pelaksanaan || '-'}</strong></p>
                         </div>
                         <p className="text-xs text-gray-600 leading-relaxed pt-2">
-                          {lap.deskripsi_singkat}
+                          {lap.deskripsi_singkat || 'Data deskripsi belum diisi...'}
                         </p>
                       </div>
 
@@ -1572,12 +1584,14 @@ export default function PortalDkr() {
 
                       <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-50 flex-wrap">
                         <div className="flex gap-2 items-center">
-                          <button
-                            onClick={() => handleDownloadPdf(lap)}
-                            className="bg-brand-green hover:bg-[#0E9F6E] text-white font-extrabold font-mono text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition-all"
-                          >
-                            <FileText className="w-3.5 h-3.5" /> Download PDF
-                          </button>
+                          {lap.status !== 'draft' && (
+                            <button
+                              onClick={() => handleDownloadPdf(lap)}
+                              className="bg-brand-green hover:bg-[#0E9F6E] text-white font-extrabold font-mono text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition-all"
+                            >
+                              <FileText className="w-3.5 h-3.5" /> Download PDF
+                            </button>
+                          )}
 
                           {lap.file_laporan_url && (
                             <a
@@ -1598,6 +1612,15 @@ export default function PortalDkr() {
                             className="bg-brand-orange hover:bg-brand-orange/90 text-brand-brown-dark font-extrabold font-mono text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition-all"
                           >
                             <Edit3 className="w-3.5 h-3.5" /> Revisi Laporan Sekarang
+                          </button>
+                        )}
+                        
+                        {lap.status === 'draft' && (
+                          <button
+                            onClick={() => handleEditLaporan(lap)}
+                            className="bg-slate-800 hover:bg-slate-700 text-white font-extrabold font-mono text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer shadow-sm transition-all"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" /> Lanjutkan Pengisian
                           </button>
                         )}
                       </div>
