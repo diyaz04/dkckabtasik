@@ -4,13 +4,14 @@ import { compressAndUploadFile } from '../utils/imageUpload';
 
 interface LaporanFormGeneratorProps {
   jenisDokumen: '02GP' | '01DIKLAT';
+  onJenisDokumenChange?: (jenis: '02GP' | '01DIKLAT') => void;
   initialData?: any;
   onSave: (formData: any) => void;
   onCancel: () => void;
   isLoading: boolean;
 }
 
-export default function LaporanFormGenerator({ jenisDokumen, initialData, onSave, onCancel, isLoading }: LaporanFormGeneratorProps) {
+export default function LaporanFormGenerator({ jenisDokumen, onJenisDokumenChange, initialData, onSave, onCancel, isLoading }: LaporanFormGeneratorProps) {
   const [step, setStep] = useState(1);
   
   // -- State untuk form data
@@ -95,6 +96,19 @@ export default function LaporanFormGenerator({ jenisDokumen, initialData, onSave
         {step === 1 && (
           <div className="animate-fade-in space-y-4">
             <h3 className="font-bold text-lg text-brand-orange border-b pb-2">1. Kegiatan & Pelaksana</h3>
+            {onJenisDokumenChange && (
+              <div className="mb-4">
+                <label className="block text-xs font-bold mb-1">Jenis Pelaporan</label>
+                <select
+                  value={jenisDokumen}
+                  onChange={(e) => onJenisDokumenChange(e.target.value as any)}
+                  className="w-full bg-gray-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-bold focus:outline-none focus:border-[#0E9F6E]"
+                >
+                  <option value="02GP">02GP (Laporan Kegiatan Umum Ranting)</option>
+                  <option value="01DIKLAT">01 DIKLAT (Pendidikan & Pelatihan Kepemimpinan/Teknis)</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-bold mb-1">Nama Kegiatan</label>
               <input type="text" className="w-full p-2 border rounded-xl bg-slate-50" value={kegiatanData.nama} onChange={e => setKegiatanData({...kegiatanData, nama: e.target.value})} placeholder="Misal: Kursus Pengelola Dewan Kerja" />

@@ -1416,12 +1416,6 @@ export default function PortalDkr() {
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setShowGeneratorModal(true)}
-                  className="bg-[#0E9F6E]/10 hover:bg-[#0E9F6E]/20 text-[#0E9F6E] border border-[#0E9F6E]/20 font-extrabold font-mono text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" /> Generate Format Resmi
-                </button>
-                <button
                   onClick={() => {
                     setLaporanEditingId(null);
                     setLaporanNamaKegiatan('');
@@ -1486,6 +1480,7 @@ export default function PortalDkr() {
             {showLaporanForm && (
               <LaporanFormGenerator
                 jenisDokumen={laporanJenis}
+                onJenisDokumenChange={setLaporanJenis}
                 onSave={handleSaveLaporan}
                 onCancel={() => setShowLaporanForm(false)}
                 isLoading={laporanSaving}
