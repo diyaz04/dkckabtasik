@@ -10,6 +10,8 @@ import {
   Informasi, SiteContent, FormKegiatanConfig, DataPotensial, Profile, Saka, LaporanKegiatan 
 } from '../types';
 import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/imageUpload';
+import SiteContentEditor from './SiteContentEditor';
+import GreetingBanner from './GreetingBanner';
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
@@ -1159,6 +1161,8 @@ export default function PortalAdmin() {
       {/* Main Content Pane */}
       <main className="flex-1 p-6 sm:p-10 overflow-y-auto">
         
+        <GreetingBanner name={user?.nama || 'Administrator'} role={user?.role} />
+
         {/* TAB 1: DASHBOARD REKAP */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">

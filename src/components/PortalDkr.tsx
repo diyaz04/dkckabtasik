@@ -13,6 +13,7 @@ import { compressAndUploadFile } from '../utils/imageUpload';
 import LaporanFormGenerator from './LaporanFormGenerator';
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import html2pdf from 'html2pdf.js';
+import GreetingBanner from './GreetingBanner';
 
 export default function PortalDkr() {
   const navigate = useNavigate();
@@ -817,6 +818,8 @@ export default function PortalDkr() {
       {/* Main Panel Content */}
       <main className="flex-1 p-6 sm:p-10 overflow-y-auto">
         
+        <GreetingBanner name={user?.nama || 'Pengurus DKR'} role={user?.role} />
+
         {/* DKR TAB 1: DASHBOARD RANTING */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
