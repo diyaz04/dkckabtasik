@@ -17,6 +17,8 @@ export default function PortalAdmin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi'>('dashboard');
 
+  const [user, setUser] = useState<any>(null);
+
   // DB States
   const [kecamatanList, setKecamatanList] = useState<Kecamatan[]>([]);
   const [sakaList, setSakaList] = useState<Saka[]>([]);
@@ -120,6 +122,7 @@ export default function PortalAdmin() {
     if (userObj.role !== 'admin') {
       navigate('/portal/dkr');
     }
+    setUser(userObj);
   };
 
   const loadData = async () => {
