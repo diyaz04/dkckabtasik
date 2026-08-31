@@ -78,7 +78,7 @@ async function uploadToUploadcare(base64Data: string, filename: string, _fileTyp
       if (!uploadRes.ok) throw new Error(`Uploadcare API error: ${uploadRes.status}`);
       const resJson: any = await uploadRes.json();
       if (!resJson.file) throw new Error('No file UUID returned');
-      return { url: `https://ucarecdn.com/${resJson.file}/${encodeURIComponent(filename)}`, source: 'uploadcare' };
+      return { url: `https://ucarecdn.com/${resJson.file}/-/inline/yes/`, source: 'uploadcare' };
     } catch (e: any) {
       console.error('Uploadcare upload failed:', e.message);
     }
