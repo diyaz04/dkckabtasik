@@ -1059,105 +1059,117 @@ export default function PortalAdmin() {
             {isSidebarCollapsed ? '•' : 'Ringkasan'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Dashboard Rekap' : ''} 
             onClick={() => setActiveTab('dashboard')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'dashboard' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <LayoutDashboard className="w-4 h-4" /> Dashboard Rekap
-          </button>
+            <LayoutDashboard className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Dashboard Rekap</span>}</button>
 
           {/* Kategori: DATA POTENSIAL */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
             {isSidebarCollapsed ? '•' : 'Data Potensial'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Potensial DKR (Ranting)' : ''} 
             onClick={() => setActiveTab('potensial_dkr')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'potensial_dkr' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <BarChart2 className="w-4 h-4" /> Potensial DKR (Ranting)
-          </button>
+            <BarChart2 className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Potensial DKR (Ranting)</span>}</button>
 
           <button 
+            title={isSidebarCollapsed ? 'Potensial SAKA (Karya)' : ''} 
             onClick={() => setActiveTab('potensial_saka')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'potensial_saka' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <BarChart2 className="w-4 h-4" /> Potensial SAKA (Karya)
-          </button>
+            <BarChart2 className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Potensial SAKA (Karya)</span>}</button>
 
           {/* Kategori: KONTEN & PUBLIKASI */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
             {isSidebarCollapsed ? '•' : 'Konten &amp; Publikasi'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Persetujuan Warta' : ''} 
             onClick={() => setActiveTab('berita')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'berita' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <FileText className="w-4 h-4" /> Persetujuan Warta
-          </button>
+            <FileText className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Persetujuan Warta</span>}</button>
 
           <button 
+            title={isSidebarCollapsed ? 'Kegiatan & Form Builder' : ''} 
             onClick={() => setActiveTab('agenda')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'agenda' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Calendar className="w-4 h-4" /> Kegiatan & Form Builder
-          </button>
+            <Calendar className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Kegiatan & Form Builder</span>}</button>
 
           <button 
+            title={isSidebarCollapsed ? 'Personalia DKC' : ''} 
             onClick={() => setActiveTab('personalia')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'personalia' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Award className="w-4 h-4" /> Personalia DKC
-          </button>
+            <Award className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Personalia DKC</span>}</button>
 
           <button 
+            title={isSidebarCollapsed ? 'Kelola Landingpage' : ''} 
             onClick={() => setActiveTab('konten')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'konten' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Settings className="w-4 h-4" /> Kelola Landingpage
-          </button>
+            <Settings className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Kelola Landingpage</span>}</button>
 
           <button 
+            title={isSidebarCollapsed ? 'Pusat Unduhan Berkas' : ''} 
             onClick={() => setActiveTab('informasi')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'informasi' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Download className="w-4 h-4" /> Pusat Unduhan Berkas
-          </button>
+            <Download className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Pusat Unduhan Berkas</span>}</button>
 
           {/* Kategori: MANAJEMEN AKUN */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
             {isSidebarCollapsed ? '•' : 'Manajemen Akun'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'User DKR Kecamatan' : ''}
             onClick={() => { setActiveTab('users_dkr'); setNewRole('user'); }}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'users_dkr' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Users className="w-4 h-4" /> User DKR Kecamatan
+            <Users className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>User DKR Kecamatan</span>}
           </button>
 
           <button 
+            title={isSidebarCollapsed ? 'User SAKA Kabupaten' : ''}
             onClick={() => { setActiveTab('users_saka'); setNewRole('saka'); }}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'users_saka' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Users className="w-4 h-4" /> User SAKA Kabupaten
+            <Users className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>User SAKA Kabupaten</span>}
           </button>
 
           {/* Kategori: VERIFIKASI LAPORAN */}
@@ -1165,13 +1177,14 @@ export default function PortalAdmin() {
             {isSidebarCollapsed ? '•' : 'Verifikasi Laporan'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Verifikasi Laporan 02GP & 01' : ''} 
             onClick={() => setActiveTab('laporan')}
-            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'laporan' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
           >
-            <Award className="w-4 h-4" /> Verifikasi Laporan 02GP & 01
-          </button>
+            <Award className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Verifikasi Laporan 02GP & 01</span>}</button>
         </nav>
 
         {/* Desktop Logout Block */}
