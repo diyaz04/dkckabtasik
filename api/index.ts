@@ -55,10 +55,11 @@ async function uploadFile(base64Data: string, filename: string, _fileType: strin
       return { url: res.secure_url, source: 'cloudinary' };
     } catch (e: any) {
       console.error('Cloudinary upload failed:', e.message);
+      throw new Error(`Cloudinary error: ${e.message}`);
     }
   }
-  // If cloudinary not configured or fails, return a placeholder
-  return { url: '/uploads/' + filename, source: 'local' };
+  
+  throw new Error('Cloudinary belum dikonfigurasi di Environment Variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)');
 }
 
 async function uploadToUploadcare(base64Data: string, filename: string, _fileType: string) {
