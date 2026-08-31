@@ -706,18 +706,43 @@ export default function PortalDkr() {
       </div>
 
       {/* Desktop Sidebar (Desktop Only) */}
-      <aside className="hidden md:flex w-64 bg-brand-brown-dark text-white border-r-4 border-brand-green flex-col shrink-0">
-        <div className="p-6 border-b border-white/10 text-center">
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border border-brand-green mx-auto p-1 mb-3">
-            <span className="text-xl text-brand-green font-bold">⚜</span>
+      <aside className={`hidden md:flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-brand-brown-dark text-white border-r-4 border-brand-green flex-col shrink-0`}>
+        <div className="p-5 border-b border-white/10 flex flex-col items-center relative">
+          <div className={`flex items-center gap-3 w-full ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-brand-green p-1 shrink-0 shadow-sm overflow-hidden">
+                {profile?.logo_url ? (
+                  <img src={profile.logo_url} alt="Logo DKR" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl text-brand-green font-bold">⛺</span>
+                )}
+              </div>
+              {!isSidebarCollapsed && (
+                <div className="text-left">
+                  <h2 className="font-display font-extrabold text-xs tracking-wider text-brand-green uppercase leading-tight">Portal DKR Ranting</h2>
+                  <p className="text-[10px] text-gray-300 font-mono mt-0.5 tracking-wider uppercase leading-none">Kec. {kecamatan?.nama_kecamatan || '...'}</p>
+                </div>
+              )}
+            </div>
+            {!isSidebarCollapsed && (
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 hover:bg-white/10 rounded-lg text-white">
+                <PanelLeft className="w-5 h-5" />
+              </button>
+            )}
           </div>
-          <h2 className="font-display font-extrabold text-xs tracking-wider text-brand-green uppercase">Portal DKR Ranting</h2>
-          <p className="text-[10px] text-gray-300 font-mono mt-1">Kec. {kecamatan?.nama_kecamatan || '...'}</p>
+          
+          {isSidebarCollapsed && (
+            <button onClick={() => setIsSidebarCollapsed(false)} className="mt-4 p-2 hover:bg-white/10 rounded-lg text-white">
+              <PanelLeft className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         <nav className="p-4 space-y-1.5 flex-1 font-sans">
           {/* Kategori: RINGKASAN */}
-          <p className="px-4 pt-1 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Ringkasan</p>
+          <p className={`px-4 pt-1 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Ringkasan'}
+          </p>
           <button 
             onClick={() => setActiveTab('dashboard')}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -728,7 +753,9 @@ export default function PortalDkr() {
           </button>
 
           {/* Kategori: DATA RANTING */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Data Ranting</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Data Ranting'}
+          </p>
           <button 
             onClick={() => setActiveTab('potensial')}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -757,7 +784,9 @@ export default function PortalDkr() {
           </button>
 
           {/* Kategori: PUBLIKASI & KEGIATAN */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Publikasi &amp; Kegiatan</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Publikasi &amp; Kegiatan'}
+          </p>
           <button 
             onClick={() => setActiveTab('berita')}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -777,7 +806,9 @@ export default function PortalDkr() {
           </button>
 
           {/* Kategori: LAPORAN & AKUN */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Laporan &amp; Akun</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Laporan &amp; Akun'}
+          </p>
           {showLaporanMenu && (
             <button 
               onClick={() => setActiveTab('laporan')}
@@ -801,20 +832,20 @@ export default function PortalDkr() {
 
         {/* Desktop Logout Block */}
         <div className="p-4 border-t border-white/10 space-y-2">
-          
           <button 
+            title="Kembali ke Beranda"
             onClick={() => navigate('/')}
-            className="w-full bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] py-2 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-none"
+            className={`w-full bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] py-2 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-none ${isSidebarCollapsed ? 'px-0' : ''}`}
           >
-            Kembali ke Beranda
+            {isSidebarCollapsed ? <LayoutDashboard className="w-4 h-4" /> : 'Kembali ke Beranda'}
           </button>
           <button 
+            title="Keluar Sesi"
             onClick={handleLogout}
-            className="w-full bg-brand-red/15 hover:bg-brand-red/25 text-brand-red border border-brand-red/30 font-bold text-[11px] py-2 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-none"
+            className={`w-full bg-brand-red/15 hover:bg-brand-red/25 text-brand-red border border-brand-red/30 font-bold text-[11px] py-2 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-none ${isSidebarCollapsed ? 'px-0' : ''}`}
           >
-            Keluar Sesi
+            {isSidebarCollapsed ? <Check className="w-4 h-4" /> : 'Keluar Sesi'}
           </button>
-        
         </div>
       </aside>
 

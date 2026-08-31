@@ -1019,13 +1019,13 @@ export default function PortalAdmin() {
         <div className="p-5 border-b border-white/10 flex flex-col items-center">
           <div className={`flex items-center gap-3 w-full ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-emerald-400 p-1 shrink-0 shadow-sm">
-                <span className="text-2xl text-[#0E9F6E] font-bold">⛺</span>
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-emerald-400 p-1 shrink-0 shadow-sm overflow-hidden">
+                <img src="/logo.png" alt="Logo DKC" className="w-full h-full object-contain" />
               </div>
               {!isSidebarCollapsed && (
                 <div className="text-left">
                   <h2 className="font-display font-black text-xs tracking-tight text-white uppercase leading-tight">DKC TASIKMALAYA</h2>
-              <p className="text-[9px] text-[#A7F3D0] font-mono mt-0.5 tracking-wider uppercase leading-none">NUR SAKTI BUANA</p>
+                  <p className="text-[9px] text-[#A7F3D0] font-mono mt-0.5 tracking-wider uppercase leading-none">NUR SAKTI BUANA</p>
                 </div>
               )}
             </div>
