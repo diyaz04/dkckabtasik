@@ -759,30 +759,32 @@ app.post('/api/laporan_kegiatan/save', async (req: Request, res: Response) => {
 
     let updatedReport = null;
     if (data.id) {
-      const { data: ret } = await supabaseAdmin.from('laporan_kegiatan').update({
+      const { data: ret, error } = await supabaseAdmin.from('laporan_kegiatan').update({
         jenis_dokumen: data.jenis_dokumen,
         nama_kegiatan: data.nama_kegiatan,
-        tanggal_pelaksanaan: data.tanggal_pelaksanaan,
+        tanggal_pelaksanaan: data.tanggal_pelaksanaan || null,
         tempat_pelaksanaan: data.tempat_pelaksanaan,
         deskripsi_singkat: data.deskripsi_singkat,
-        file_laporan_url: data.file_laporan_url,
+        file_laporan_url: data.file_laporan_url || null,
         form_data: data.form_data,
         status: data.status || 'pending'
       }).eq('id', data.id).select().single();
+        if (error) throw error;
       updatedReport = ret;
     } else {
-      const { data: ret } = await supabaseAdmin.from('laporan_kegiatan').insert({
+      const { data: ret, error } = await supabaseAdmin.from('laporan_kegiatan').insert({
         kecamatan_id: data.kecamatan_id,
         kecamatan_nama: data.kecamatan_nama || 'Kecamatan',
         jenis_dokumen: data.jenis_dokumen,
         nama_kegiatan: data.nama_kegiatan,
-        tanggal_pelaksanaan: data.tanggal_pelaksanaan,
+        tanggal_pelaksanaan: data.tanggal_pelaksanaan || null,
         tempat_pelaksanaan: data.tempat_pelaksanaan,
         deskripsi_singkat: data.deskripsi_singkat,
-        file_laporan_url: data.file_laporan_url || '',
+        file_laporan_url: data.file_laporan_url || null,
         form_data: data.form_data,
         status: data.status || 'pending'
       }).select().single();
+        if (error) throw error;
       updatedReport = ret;
     }
     res.json({ success: true, data: updatedReport });
