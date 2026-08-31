@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
   Award, FileSpreadsheet, Edit3, Clock, ClipboardList, Printer, ChevronRight, ChevronLeft, AlertCircle, Copy
-} from 'lucide-react';
+, PanelLeft } from 'lucide-react';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
   Pangkalan, DataPotensial, DkrProfile, LaporanKegiatan
@@ -18,6 +18,7 @@ import GreetingBanner from './GreetingBanner';
 export default function PortalDkr() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan'>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   const [user, setUser] = useState<any>(null);
   const [kecamatan, setKecamatan] = useState<Kecamatan | null>(null);
@@ -800,6 +801,7 @@ export default function PortalDkr() {
 
         {/* Desktop Logout Block */}
         <div className="p-4 border-t border-white/10 space-y-2">
+          
           <button 
             onClick={() => navigate('/')}
             className="w-full bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] py-2 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-none"
@@ -812,6 +814,7 @@ export default function PortalDkr() {
           >
             Keluar Sesi
           </button>
+        
         </div>
       </aside>
 

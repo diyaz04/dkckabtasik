@@ -16,6 +16,7 @@ import GreetingBanner from './GreetingBanner';
 export default function PortalAdmin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi'>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const [user, setUser] = useState<any>(null);
 
@@ -1014,28 +1015,49 @@ export default function PortalAdmin() {
       </div>
 
       {/* Desktop Sidebar (Desktop Only) with Gradient Green matching the uploaded reference */}
-      <aside className="hidden md:flex w-64 bg-gradient-to-b from-[#0E9F6E] via-[#10B981] to-[#065F46] text-white flex-col shrink-0 border-r border-[#064E3B]">
+      <aside className={`hidden md:flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-gradient-to-b from-[#0E9F6E] via-[#10B981] to-[#065F46] text-white flex-col shrink-0 border-r border-[#064E3B]`}>
         <div className="p-5 border-b border-white/10 flex flex-col items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-emerald-400 p-1 shrink-0 shadow-sm">
-              <span className="text-2xl text-[#0E9F6E] font-bold">⚜</span>
-            </div>
-            <div className="text-left">
-              <h2 className="font-display font-black text-xs tracking-tight text-white uppercase leading-tight">DKC TASIKMALAYA</h2>
+          <div className={`flex items-center gap-3 w-full ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-emerald-400 p-1 shrink-0 shadow-sm">
+                <span className="text-2xl text-[#0E9F6E] font-bold">⛺</span>
+              </div>
+              {!isSidebarCollapsed && (
+                <div className="text-left">
+                  <h2 className="font-display font-black text-xs tracking-tight text-white uppercase leading-tight">DKC TASIKMALAYA</h2>
               <p className="text-[9px] text-[#A7F3D0] font-mono mt-0.5 tracking-wider uppercase leading-none">NUR SAKTI BUANA</p>
+                </div>
+              )}
             </div>
+            {!isSidebarCollapsed && (
+              <button onClick={() => setIsSidebarCollapsed(true)} className="p-1 hover:bg-white/10 rounded-lg text-white">
+                <PanelLeft className="w-5 h-5" />
+              </button>
+            )}
           </div>
           
+          {isSidebarCollapsed && (
+            <button onClick={() => setIsSidebarCollapsed(false)} className="mt-4 p-2 hover:bg-white/10 rounded-lg text-white">
+              <PanelLeft className="w-5 h-5" />
+            </button>
+          )}
+          
           {/* ACCESS BADGE AS SHOWN IN THE USER REFERENCE IMAGE */}
-          <div className="w-full bg-black/15 border border-emerald-500/20 rounded-2xl p-3 text-center mt-4">
+          {!isSidebarCollapsed && (
+            <div className="w-full bg-black/15 border border-emerald-500/20 rounded-2xl p-3 text-center mt-4">
+              
             <p className="text-[9px] font-bold tracking-widest text-[#A7F3D0] uppercase font-mono">AKSES MASUK:</p>
             <h3 className="text-xs font-black tracking-widest text-white uppercase mt-0.5">ADMINISTRATOR</h3>
-          </div>
+          
+            </div>
+          )}
         </div>
 
         <nav className="p-4 space-y-1.5 flex-1 font-sans overflow-y-auto">
           {/* Kategori: RINGKASAN */}
-          <p className="px-4 pt-1 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono">Ringkasan</p>
+          <p className={`px-4 pt-1 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Ringkasan'}
+          </p>
           <button 
             onClick={() => setActiveTab('dashboard')}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -1046,7 +1068,9 @@ export default function PortalAdmin() {
           </button>
 
           {/* Kategori: DATA POTENSIAL */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono">Data Potensial</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Data Potensial'}
+          </p>
           <button 
             onClick={() => setActiveTab('potensial_dkr')}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -1066,7 +1090,9 @@ export default function PortalAdmin() {
           </button>
 
           {/* Kategori: KONTEN & PUBLIKASI */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono">Konten &amp; Publikasi</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Konten &amp; Publikasi'}
+          </p>
           <button 
             onClick={() => setActiveTab('berita')}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -1113,7 +1139,9 @@ export default function PortalAdmin() {
           </button>
 
           {/* Kategori: MANAJEMEN AKUN */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono">Manajemen Akun</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Manajemen Akun'}
+          </p>
           <button 
             onClick={() => { setActiveTab('users_dkr'); setNewRole('user'); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -1133,7 +1161,9 @@ export default function PortalAdmin() {
           </button>
 
           {/* Kategori: VERIFIKASI LAPORAN */}
-          <p className="px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono">Verifikasi Laporan</p>
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Verifikasi Laporan'}
+          </p>
           <button 
             onClick={() => setActiveTab('laporan')}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
@@ -1146,18 +1176,22 @@ export default function PortalAdmin() {
 
         {/* Desktop Logout Block */}
         <div className="p-4 border-t border-white/10 space-y-2">
+          
           <button 
+            title="Kembali ke Beranda"
             onClick={() => navigate('/')}
-            className="w-full bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] py-2.5 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className={`w-full bg-white/5 hover:bg-white/10 text-white font-bold text-[11px] py-2.5 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${isSidebarCollapsed ? 'px-0' : ''}`}
           >
-            Kembali ke Beranda
+            {isSidebarCollapsed ? <LayoutDashboard className="w-4 h-4" /> : 'Kembali ke Beranda'}
           </button>
           <button 
+            title="Keluar Sesi"
             onClick={handleLogout}
-            className="w-full bg-brand-red/10 hover:bg-brand-red/20 text-red-200 border border-brand-red/20 font-bold text-[11px] py-2.5 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className={`w-full bg-brand-red/10 hover:bg-brand-red/20 text-red-200 border border-brand-red/20 font-bold text-[11px] py-2.5 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${isSidebarCollapsed ? 'px-0' : ''}`}
           >
-            Keluar Sesi
+            {isSidebarCollapsed ? <Check className="w-4 h-4" /> : 'Keluar Sesi'}
           </button>
+        
         </div>
       </aside>
 
