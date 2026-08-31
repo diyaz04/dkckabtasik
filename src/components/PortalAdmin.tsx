@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BarChart2, Users, Building, FileText, Calendar, Plus, Trash, Check, X,
   Save, Edit, Lock, Eye, AlertCircle, ToggleLeft, ToggleRight, LayoutDashboard, Settings,
-  RefreshCw, Palette, Upload, Award, ClipboardList, Printer, Clock, ChevronRight, Download
+  RefreshCw, Palette, Upload, Award, ClipboardList, Printer, Clock, ChevronRight, Download, PanelLeft
 } from 'lucide-react';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
