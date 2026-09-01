@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BarChart2, Users, Building, FileText, Calendar, Plus, Trash, Check, X,
-  Save, Edit, Lock, Eye, AlertCircle, ToggleLeft, ToggleRight, LayoutDashboard, Settings,
+  Save, Edit, Lock, Eye, AlertCircle, ToggleLeft, ToggleRight, LayoutDashboard, Search, Bell, Menu, Settings,
   RefreshCw, Palette, Upload, Award, ClipboardList, Printer, Clock, ChevronRight, Download, PanelLeft
 } from 'lucide-react';
 import { 
@@ -17,6 +17,7 @@ export default function PortalAdmin() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [user, setUser] = useState<any>(null);
 
@@ -881,141 +882,35 @@ export default function PortalAdmin() {
   return (
     <div className="min-h-screen bg-dash-canvas flex flex-col md:flex-row">
       
-      {/* Mobile Top Header & Swipeable Tab-bar (Mobile Only) */}
-      <div className="md:hidden bg-gradient-to-r from-[#0E9F6E] to-[#065F46] text-white border-b-2 border-emerald-500/20 flex flex-col shrink-0 sticky top-0 z-40 shadow-md">
-        <div className="p-4 flex items-center justify-between border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center border border-emerald-400 p-0.5">
-              <span className="text-sm text-[#0E9F6E] font-bold">⚜</span>
-            </div>
-            <div>
-              <h2 className="font-extrabold text-[10px] tracking-wider font-mono text-white uppercase leading-none">Admin DKC</h2>
-              <p className="text-[8px] text-emerald-200 font-mono mt-0.5 leading-none">Kab. Tasikmalaya</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button 
-              onClick={() => navigate('/')} 
-              className="text-[9px] font-bold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1.5 rounded-lg uppercase tracking-wider font-mono"
-            >
-              Beranda
-            </button>
-            <button 
-              onClick={handleLogout} 
-              className="text-[9px] font-bold bg-brand-red/20 hover:bg-brand-red/35 text-brand-red border border-brand-red/30 px-2.5 py-1.5 rounded-lg uppercase tracking-wider font-mono"
-            >
-              Keluar
-            </button>
-          </div>
+      {/* 1. TOP APP BAR (Mobile Only) */}
+      <div className="md:hidden bg-white flex items-center justify-between px-4 py-3 shrink-0 sticky top-0 z-40 shadow-sm border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-800 p-1">
+            <Menu className="w-6 h-6" />
+          </button>
+          <h2 className="font-black text-sm tracking-widest font-mono text-gray-800 uppercase">ESKAHADE</h2>
         </div>
-        
-        {/* Horizontal Scroll Menu - dikelompokkan per kategori dengan separator */}
-        <div className="flex items-center gap-1.5 overflow-x-auto px-4 py-2 bg-[#064E3B] scrollbar-none whitespace-nowrap">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'dashboard' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" /> Rekap
+        <div className="flex items-center gap-4">
+          <button className="relative text-gray-500">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
           </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          <button 
-            onClick={() => setActiveTab('potensial_dkr')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'potensial_dkr' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> Potensial DKR
-          </button>
-          <button 
-            onClick={() => setActiveTab('potensial_saka')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'potensial_saka' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> Potensial SAKA
-          </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          <button 
-            onClick={() => setActiveTab('berita')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'berita' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" /> Warta
-          </button>
-          <button 
-            onClick={() => setActiveTab('agenda')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'agenda' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" /> Kegiatan
-          </button>
-          <button 
-            onClick={() => setActiveTab('personalia')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'personalia' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" /> Personalia DKC
-          </button>
-          <button 
-            onClick={() => setActiveTab('konten')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'konten' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Settings className="w-3.5 h-3.5" /> Landingpage
-          </button>
-          <button 
-            onClick={() => setActiveTab('informasi')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'informasi' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Download className="w-3.5 h-3.5" /> Unduhan
-          </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          <button 
-            onClick={() => { setActiveTab('users_dkr'); setNewRole('user'); }}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'users_dkr' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" /> User DKR
-          </button>
-          <button 
-            onClick={() => { setActiveTab('users_saka'); setNewRole('saka'); }}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'users_saka' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" /> User SAKA
-          </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          <button 
-            onClick={() => setActiveTab('laporan')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'laporan' ? 'bg-white text-[#065F46] shadow-sm' : 'text-emerald-100 hover:bg-white/5'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" /> Laporan DKR
-          </button>
+          <div className="w-8 h-8 rounded-full bg-brand-green flex items-center justify-center text-white text-xs font-bold shadow-md">
+            AD
+          </div>
         </div>
       </div>
 
+      {/* 2. SIDEBAR BACKDROP (Mobile Only) */}
+      {isMobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/60 z-[45] backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Desktop Sidebar (Desktop Only) with Gradient Green matching the uploaded reference */}
-      <aside className={`hidden md:flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-gradient-to-b from-[#0E9F6E] via-[#10B981] to-[#065F46] text-white flex-col shrink-0 border-r border-[#064E3B]`}>
+      <aside className={`fixed md:relative inset-y-0 left-0 z-50 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-gradient-to-b from-[#0E9F6E] via-[#10B981] to-[#065F46] text-white flex-col shrink-0 border-r border-[#064E3B] shadow-2xl md:shadow-none`}>
         <div className="p-5 border-b border-white/10 flex flex-col items-center">
           <div className={`flex items-center gap-3 w-full ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
@@ -1060,7 +955,7 @@ export default function PortalAdmin() {
           </p>
           <button 
             title={isSidebarCollapsed ? 'Dashboard Rekap' : ''} 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'dashboard' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1074,7 +969,7 @@ export default function PortalAdmin() {
           </p>
           <button 
             title={isSidebarCollapsed ? 'Potensial DKR (Ranting)' : ''} 
-            onClick={() => setActiveTab('potensial_dkr')}
+            onClick={() => { setActiveTab('potensial_dkr'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'potensial_dkr' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1084,7 +979,7 @@ export default function PortalAdmin() {
 
           <button 
             title={isSidebarCollapsed ? 'Potensial SAKA (Karya)' : ''} 
-            onClick={() => setActiveTab('potensial_saka')}
+            onClick={() => { setActiveTab('potensial_saka'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'potensial_saka' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1098,7 +993,7 @@ export default function PortalAdmin() {
           </p>
           <button 
             title={isSidebarCollapsed ? 'Persetujuan Warta' : ''} 
-            onClick={() => setActiveTab('berita')}
+            onClick={() => { setActiveTab('berita'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'berita' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1108,7 +1003,7 @@ export default function PortalAdmin() {
 
           <button 
             title={isSidebarCollapsed ? 'Kegiatan & Form Builder' : ''} 
-            onClick={() => setActiveTab('agenda')}
+            onClick={() => { setActiveTab('agenda'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'agenda' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1118,7 +1013,7 @@ export default function PortalAdmin() {
 
           <button 
             title={isSidebarCollapsed ? 'Personalia DKC' : ''} 
-            onClick={() => setActiveTab('personalia')}
+            onClick={() => { setActiveTab('personalia'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'personalia' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1128,7 +1023,7 @@ export default function PortalAdmin() {
 
           <button 
             title={isSidebarCollapsed ? 'Kelola Landingpage' : ''} 
-            onClick={() => setActiveTab('konten')}
+            onClick={() => { setActiveTab('konten'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'konten' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1138,7 +1033,7 @@ export default function PortalAdmin() {
 
           <button 
             title={isSidebarCollapsed ? 'Pusat Unduhan Berkas' : ''} 
-            onClick={() => setActiveTab('informasi')}
+            onClick={() => { setActiveTab('informasi'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'informasi' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1152,7 +1047,7 @@ export default function PortalAdmin() {
           </p>
           <button 
             title={isSidebarCollapsed ? 'User DKR Kecamatan' : ''}
-            onClick={() => { setActiveTab('users_dkr'); setNewRole('user'); }}
+            onClick={() => { setActiveTab('users_dkr'); setNewRole('user'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'users_dkr' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1163,7 +1058,7 @@ export default function PortalAdmin() {
 
           <button 
             title={isSidebarCollapsed ? 'User SAKA Kabupaten' : ''}
-            onClick={() => { setActiveTab('users_saka'); setNewRole('saka'); }}
+            onClick={() => { setActiveTab('users_saka'); setNewRole('saka'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'users_saka' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1178,7 +1073,7 @@ export default function PortalAdmin() {
           </p>
           <button 
             title={isSidebarCollapsed ? 'Verifikasi Laporan 02GP & 01' : ''} 
-            onClick={() => setActiveTab('laporan')}
+            onClick={() => { setActiveTab('laporan'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'laporan' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
             }`}
@@ -1209,9 +1104,21 @@ export default function PortalAdmin() {
       </aside>
 
       {/* Main Content Pane */}
-      <main className="flex-1 p-6 sm:p-10 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-10 pb-28 md:pb-10 overflow-y-auto">
         
         <GreetingBanner name={user?.nama || 'Administrator'} role={user?.role} />
+
+          {/* Search Bar (Mobile Style) */}
+          <div className="mt-6 mb-8 relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="w-5 h-5 text-gray-400" />
+            </div>
+            <input 
+              type="text" 
+              placeholder="Cari menu atau layanan di sini..." 
+              className="w-full bg-white border border-gray-200/60 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
+            />
+          </div>
 
         {/* TAB 1: DASHBOARD REKAP */}
         {activeTab === 'dashboard' && (
@@ -3061,6 +2968,45 @@ export default function PortalAdmin() {
 
       </main>
 
-    </div>
+    
+      {/* 3. BOTTOM NAVIGATION (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 px-6 py-2 pb-4 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-3xl">
+        <div className="flex justify-between items-center relative mt-2">
+          
+          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'dashboard' ? 'text-brand-green' : 'text-gray-400'}`}>
+            <LayoutDashboard className={`${activeTab === 'dashboard' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Beranda</span>
+          </button>
+          
+          <button onClick={() => setActiveTab('berita')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'berita' ? 'text-brand-green' : 'text-gray-400'}`}>
+            <FileText className={`${activeTab === 'berita' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Warta</span>
+          </button>
+          
+          {/* Floating Center Button */}
+          <div className="relative -top-8 flex flex-col items-center">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="w-14 h-14 bg-brand-green rounded-full flex items-center justify-center text-white shadow-xl border-4 border-white/80 transform hover:scale-105 active:scale-95 transition-all"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="text-[10px] font-bold text-brand-green mt-1.5">Menu</span>
+          </div>
+
+          <button onClick={() => setActiveTab('agenda')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'agenda' ? 'text-brand-green' : 'text-gray-400'}`}>
+            <Calendar className={`${activeTab === 'agenda' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Kegiatan</span>
+          </button>
+          
+          <button onClick={() => setActiveTab('laporan')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'laporan' ? 'text-brand-green' : 'text-gray-400'}`}>
+            <Award className={`${activeTab === 'laporan' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Laporan</span>
+          </button>
+          
+        </div>
+      </div>
+      
+      </div>
   );
 }

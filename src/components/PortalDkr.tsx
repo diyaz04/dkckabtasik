@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
+  LayoutDashboard, Search, Bell, Menu, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
   Award, FileSpreadsheet, Edit3, Clock, ClipboardList, Printer, ChevronRight, ChevronLeft, AlertCircle, Copy
 , PanelLeft } from 'lucide-react';
 import { 
@@ -19,6 +19,7 @@ export default function PortalDkr() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [user, setUser] = useState<any>(null);
   const [kecamatan, setKecamatan] = useState<Kecamatan | null>(null);
@@ -597,113 +598,32 @@ export default function PortalDkr() {
   return (
     <div className="min-h-screen bg-dash-canvas flex flex-col md:flex-row">
       
-      {/* Mobile Top Header & Swipeable Tab-bar (Mobile Only) */}
-      <div className="md:hidden bg-brand-brown-dark text-white border-b-4 border-brand-green flex flex-col shrink-0 sticky top-0 z-40 shadow-md">
-        <div className="p-4 flex items-center justify-between border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center border border-brand-green p-0.5">
-              <span className="text-sm text-brand-green font-bold">⚜</span>
-            </div>
-            <div>
-              <h2 className="font-extrabold text-[10px] tracking-wider font-mono text-brand-green uppercase leading-none">Portal DKR</h2>
-              <p className="text-[8px] text-gray-300 font-mono mt-0.5 leading-none">Kec. {kecamatan?.nama_kecamatan || '...'}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button 
-              onClick={() => navigate('/')} 
-              className="text-[9px] font-bold bg-white/10 hover:bg-white/20 text-white px-2.5 py-1.5 rounded-lg uppercase tracking-wider font-mono"
-            >
-              Beranda
-            </button>
-            <button 
-              onClick={handleLogout} 
-              className="text-[9px] font-bold bg-brand-red/20 hover:bg-brand-red/35 text-brand-red border border-brand-red/30 px-2.5 py-1.5 rounded-lg uppercase tracking-wider font-mono"
-            >
-              Keluar
-            </button>
-          </div>
+      {/* 1. TOP APP BAR (Mobile Only) */}
+      <div className="md:hidden bg-white flex items-center justify-between px-4 py-3 shrink-0 sticky top-0 z-40 shadow-sm border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-800 p-1">
+            <Menu className="w-6 h-6" />
+          </button>
+          <h2 className="font-black text-sm tracking-widest font-mono text-gray-800 uppercase">ESKAHADE</h2>
         </div>
-        
-        {/* Horizontal Scroll Menu - dikelompokkan per kategori dengan separator */}
-        <div className="flex items-center gap-1.5 overflow-x-auto px-4 py-2 bg-[#4c3429] scrollbar-none whitespace-nowrap">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'dashboard' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" /> Dashboard
+        <div className="flex items-center gap-4">
+          <button className="relative text-gray-500">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
           </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          <button 
-            onClick={() => setActiveTab('potensial')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'potensial' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <BarChart2 className="w-3.5 h-3.5" /> Anggota
-          </button>
-          <button 
-            onClick={() => setActiveTab('pangkalan')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'pangkalan' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <Building className="w-3.5 h-3.5" /> Gudep
-          </button>
-          <button 
-            onClick={() => setActiveTab('personalia')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'personalia' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" /> Personalia
-          </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          <button 
-            onClick={() => setActiveTab('berita')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'berita' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" /> Berita
-          </button>
-          <button 
-            onClick={() => setActiveTab('agenda')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'agenda' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" /> Kegiatan
-          </button>
-
-          <span className="w-px h-5 bg-white/15 shrink-0 mx-0.5" />
-
-          {showLaporanMenu && (
-            <button 
-              onClick={() => setActiveTab('laporan')}
-              className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-                activeTab === 'laporan' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-              }`}
-            >
-              <Award className="w-3.5 h-3.5" /> Laporan 02GP/01
-            </button>
-          )}
-          <button 
-            onClick={() => setActiveTab('password')}
-            className={`text-[10px] font-bold px-3 py-2 rounded-lg transition-all shrink-0 flex items-center gap-1 ${
-              activeTab === 'password' ? 'bg-brand-green text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'
-            }`}
-          >
-            <Key className="w-3.5 h-3.5" /> Password
-          </button>
+          <div className="w-8 h-8 rounded-full bg-brand-brown-dark flex items-center justify-center text-white text-xs font-bold shadow-md">
+            DK
+          </div>
         </div>
       </div>
+
+      {/* 2. SIDEBAR BACKDROP (Mobile Only) */}
+      {isMobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/60 z-[45] backdrop-blur-sm transition-opacity"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
       {/* Desktop Sidebar (Desktop Only) */}
       <aside className={`hidden md:flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-brand-brown-dark text-white border-r-4 border-brand-green flex-col shrink-0`}>
@@ -744,7 +664,7 @@ export default function PortalDkr() {
             {isSidebarCollapsed ? '•' : 'Ringkasan'}
           </p>
           <button 
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'dashboard' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -757,7 +677,7 @@ export default function PortalDkr() {
             {isSidebarCollapsed ? '•' : 'Data Ranting'}
           </p>
           <button 
-            onClick={() => setActiveTab('potensial')}
+            onClick={() => { setActiveTab('potensial'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'potensial' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -766,7 +686,7 @@ export default function PortalDkr() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('pangkalan')}
+            onClick={() => { setActiveTab('pangkalan'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'pangkalan' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -775,7 +695,7 @@ export default function PortalDkr() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('personalia')}
+            onClick={() => { setActiveTab('personalia'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'personalia' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -788,7 +708,7 @@ export default function PortalDkr() {
             {isSidebarCollapsed ? '•' : 'Publikasi &amp; Kegiatan'}
           </p>
           <button 
-            onClick={() => setActiveTab('berita')}
+            onClick={() => { setActiveTab('berita'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'berita' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -797,7 +717,7 @@ export default function PortalDkr() {
           </button>
 
           <button 
-            onClick={() => setActiveTab('agenda')}
+            onClick={() => { setActiveTab('agenda'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'agenda' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -811,7 +731,7 @@ export default function PortalDkr() {
           </p>
           {showLaporanMenu && (
             <button 
-              onClick={() => setActiveTab('laporan')}
+              onClick={() => { setActiveTab('laporan'); setIsMobileMenuOpen(false); }}
               className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
                 activeTab === 'laporan' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
               }`}
@@ -821,7 +741,7 @@ export default function PortalDkr() {
           )}
 
           <button 
-            onClick={() => setActiveTab('password')}
+            onClick={() => { setActiveTab('password'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
               activeTab === 'password' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
@@ -1900,6 +1820,45 @@ export default function PortalDkr() {
 
       </main>
 
-    </div>
+    
+      {/* 3. BOTTOM NAVIGATION (Mobile Only) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 px-6 py-2 pb-4 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-3xl">
+        <div className="flex justify-between items-center relative mt-2">
+          
+          <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'dashboard' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>
+            <LayoutDashboard className={`${activeTab === 'dashboard' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Beranda</span>
+          </button>
+          
+          <button onClick={() => setActiveTab('berita')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'berita' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>
+            <FileText className={`${activeTab === 'berita' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Warta</span>
+          </button>
+          
+          {/* Floating Center Button */}
+          <div className="relative -top-8 flex flex-col items-center">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="w-14 h-14 bg-brand-brown-dark rounded-full flex items-center justify-center text-white shadow-xl border-4 border-white/80 transform hover:scale-105 active:scale-95 transition-all"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="text-[10px] font-bold text-brand-brown-dark mt-1.5">Menu</span>
+          </div>
+
+          <button onClick={() => setActiveTab('agenda')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'agenda' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>
+            <Calendar className={`${activeTab === 'agenda' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Kegiatan</span>
+          </button>
+          
+          <button onClick={() => setActiveTab('laporan')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'laporan' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>
+            <Award className={`${activeTab === 'laporan' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Laporan</span>
+          </button>
+          
+        </div>
+      </div>
+      
+      </div>
   );
 }
