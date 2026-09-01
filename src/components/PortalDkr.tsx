@@ -621,7 +621,7 @@ export default function PortalDkr() {
 
   
   const verifiedLaporanCount = laporanList.filter(l => l.status === 'diterima' || l.status === 'ditolak').length;
-  const verifiedBeritaCount = beritaList.filter(b => b.status === 'approved' || b.status === 'rejected').length;
+  const verifiedBeritaCount = berita.filter(b => b.status === 'approved' || b.status === 'rejected').length;
   const totalNotifs = verifiedLaporanCount + verifiedBeritaCount;
 
   return (
