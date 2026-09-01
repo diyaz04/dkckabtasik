@@ -1666,7 +1666,10 @@ export default function LandingPage() {
                               className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-medium"
                             >
                               <option value="">-- Pilih salah satu --</option>
-                              {f.options?.map((opt) => (
+                              {(f.label.toLowerCase().includes('kwartir ranting') 
+                                ? kecamatanList.map(k => k.nama_kecamatan).sort() 
+                                : f.options
+                              )?.map((opt) => (
                                 <option key={opt} value={opt}>{opt}</option>
                               ))}
                             </select>
