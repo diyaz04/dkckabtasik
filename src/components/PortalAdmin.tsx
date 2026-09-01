@@ -18,6 +18,10 @@ export default function PortalAdmin() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+
+  const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
 
   const [user, setUser] = useState<any>(null);
 
@@ -91,6 +95,7 @@ export default function PortalAdmin() {
   // User management states
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
   const [newKecaId, setNewKecaId] = useState('');
   const [newSakaId, setNewSakaId] = useState('');
   const [newNama, setNewNama] = useState('');
@@ -277,6 +282,27 @@ export default function PortalAdmin() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) return alert('Password minimal 6 karakter');
+    if (!user?.user_id) return alert('Gagal mengidentifikasi user. Silakan relogin.');
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.user_id, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert('Password berhasil diubah!');
+      setIsChangePasswordModalOpen(false);
+      setNewPassword('');
+    } catch (err: any) {
+      alert('Gagal merubah password: ' + err.message);
     }
   };
 
@@ -3061,6 +3087,36 @@ export default function PortalAdmin() {
       </main>
 
     
+      
+      {/* Change Password Modal */}
+      {isChangePasswordModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsChangePasswordModalOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl">
+            <h3 className="text-lg font-black text-brand-brown-dark mb-1">Ganti Password</h3>
+            <p className="text-xs text-gray-500 mb-6">Masukkan password baru untuk akun Anda.</p>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Password Baru</label>
+                <input 
+                  type="password" 
+                  required 
+                  minLength={6}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
+                  placeholder="Minimal 6 karakter"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setIsChangePasswordModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100">Batal</button>
+                <button type="submit" className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-green hover:bg-brand-green/90 shadow-md">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 3. BOTTOM NAVIGATION (Mobile Only) */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 px-6 py-2 pb-4 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-3xl">
         <div className="flex justify-between items-center relative mt-2">
