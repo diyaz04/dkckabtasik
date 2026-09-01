@@ -702,7 +702,7 @@ export default function PortalDkr() {
                 {profile?.logo_url ? (
                   <img src={profile.logo_url} alt="Logo DKR" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-xl text-brand-green font-bold">⛺</span>
+                  <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
                 )}
               </div>
               {!isSidebarCollapsed && (
@@ -732,12 +732,13 @@ export default function PortalDkr() {
             {isSidebarCollapsed ? '•' : 'Ringkasan'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Dashboard Ranting' : ''}
             onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'dashboard' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <LayoutDashboard className="w-4 h-4 text-brand-green" /> Dashboard Ranting
+            <LayoutDashboard className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Dashboard Ranting</span>}
           </button>
 
           {/* Kategori: DATA RANTING */}
@@ -745,30 +746,33 @@ export default function PortalDkr() {
             {isSidebarCollapsed ? '•' : 'Data Ranting'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Anggota Potensial' : ''}
             onClick={() => { setActiveTab('potensial'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'potensial' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <BarChart2 className="w-4 h-4 text-brand-orange" /> Anggota Potensial
+            <BarChart2 className="w-4 h-4 text-brand-orange" /> {!isSidebarCollapsed && <span>Anggota Potensial</span>}
           </button>
 
           <button 
+            title={isSidebarCollapsed ? 'Gudep / Pangkalan' : ''}
             onClick={() => { setActiveTab('pangkalan'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'pangkalan' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <Building className="w-4 h-4 text-brand-teal" /> Gudep / Pangkalan
+            <Building className="w-4 h-4 text-brand-teal" /> {!isSidebarCollapsed && <span>Gudep / Pangkalan</span>}
           </button>
 
           <button 
+            title={isSidebarCollapsed ? 'Kelola Personalia' : ''}
             onClick={() => { setActiveTab('personalia'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'personalia' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <Users className="w-4 h-4 text-brand-teal" /> Kelola Personalia
+            <Users className="w-4 h-4 text-brand-teal" /> {!isSidebarCollapsed && <span>Kelola Personalia</span>}
           </button>
 
           {/* Kategori: PUBLIKASI & KEGIATAN */}
@@ -776,21 +780,23 @@ export default function PortalDkr() {
             {isSidebarCollapsed ? '•' : 'Publikasi &amp; Kegiatan'}
           </p>
           <button 
+            title={isSidebarCollapsed ? 'Ajukan Berita' : ''}
             onClick={() => { setActiveTab('berita'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'berita' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <FileText className="w-4 h-4 text-[#F9A825]" /> Ajukan Berita
+            <FileText className="w-4 h-4 text-[#F9A825]" /> {!isSidebarCollapsed && <span>Ajukan Berita</span>}
           </button>
 
           <button 
+            title={isSidebarCollapsed ? 'Kegiatan Lokal' : ''}
             onClick={() => { setActiveTab('agenda'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'agenda' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <Calendar className="w-4 h-4 text-brand-green" /> Kegiatan Lokal
+            <Calendar className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Kegiatan Lokal</span>}
           </button>
 
           {/* Kategori: LAPORAN & AKUN */}
@@ -799,22 +805,24 @@ export default function PortalDkr() {
           </p>
           {showLaporanMenu && (
             <button 
+              title={isSidebarCollapsed ? 'Laporan 02GP & 01 Diklat' : ''}
               onClick={() => { setActiveTab('laporan'); setIsMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
                 activeTab === 'laporan' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
               }`}
             >
-              <Award className="w-4 h-4 text-[#FF7043]" /> Laporan 02GP & 01 Diklat
+              <Award className="w-4 h-4 text-[#FF7043]" /> {!isSidebarCollapsed && <span>Laporan 02GP & 01 Diklat</span>}
             </button>
           )}
 
           <button 
+            title={isSidebarCollapsed ? 'Ganti Password' : ''}
             onClick={() => { setActiveTab('password'); setIsMobileMenuOpen(false); }}
-            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
               activeTab === 'password' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <Key className="w-4 h-4 text-brand-red" /> Ganti Password
+            <Key className="w-4 h-4 text-brand-red" /> {!isSidebarCollapsed && <span>Ganti Password</span>}
           </button>
         </nav>
 
