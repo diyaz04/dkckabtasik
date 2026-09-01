@@ -140,7 +140,7 @@ export default function LaporanFormGenerator({ jenisDokumen, onJenisDokumenChang
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold mb-1">Waktu Pelaksanaan</label>
-                <input type="text" className="w-full p-2 border rounded-xl bg-slate-50" value={kegiatanData.waktu} onChange={e => setKegiatanData({...kegiatanData, waktu: e.target.value})} placeholder="Misal: 1-5 Juli 2022" />
+                <input type="date" className="w-full p-2 border rounded-xl bg-slate-50" value={kegiatanData.waktu} onChange={e => setKegiatanData({...kegiatanData, waktu: e.target.value})} />
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1">Tempat</label>

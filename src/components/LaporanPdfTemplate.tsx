@@ -35,7 +35,7 @@ export default function LaporanPdfTemplate({ laporan, profileDkr }: Props) {
             
             <tr><td className="w-8 align-top">II.</td><td colSpan={2} className="font-bold">KEGIATAN</td></tr>
             <tr><td/><td className="w-48">1. MACAM</td><td>: {laporan.nama_kegiatan}</td></tr>
-            <tr><td/><td className="w-48">2. WAKTU</td><td>: {laporan.tanggal_pelaksanaan}</td></tr>
+            <tr><td/><td className="w-48">2. WAKTU</td><td>: {laporan.tanggal_pelaksanaan ? new Date(laporan.tanggal_pelaksanaan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</td></tr>
             <tr><td/><td className="w-48">3. TEMPAT</td><td>: {laporan.tempat_pelaksanaan}</td></tr>
 
             <tr><td colSpan={3} className="h-4"></td></tr>

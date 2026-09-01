@@ -278,6 +278,14 @@ export default function PortalDkr() {
     setLaporanSaving(true);
     try {
       const { kegiatanData, kesimpulan } = formData;
+      let validDate = new Date().toISOString().split('T')[0];
+      if (kegiatanData?.waktu) {
+        const d = new Date(kegiatanData.waktu);
+        if (!isNaN(d.getTime())) {
+          validDate = d.toISOString().split('T')[0];
+        }
+      }
+
       const res = await fetch('/api/laporan_kegiatan/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,7 +295,7 @@ export default function PortalDkr() {
           kecamatan_nama: kecamatan.nama_kecamatan,
           jenis_dokumen: laporanJenis,
           nama_kegiatan: kegiatanData.nama || 'Laporan Kegiatan',
-          tanggal_pelaksanaan: kegiatanData.waktu || new Date().toISOString().split('T')[0],
+          tanggal_pelaksanaan: validDate,
           tempat_pelaksanaan: kegiatanData.tempat || '-',
           deskripsi_singkat: kesimpulan || 'Deskripsi otomatis dari form',
           file_laporan_url: '', // We don't use this anymore, we generate PDF
