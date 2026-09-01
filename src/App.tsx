@@ -10,8 +10,6 @@ import LoginPortal from './components/LoginPortal';
 import PortalAdmin from './components/PortalAdmin';
 import PortalDkr from './components/PortalDkr';
 import PortalSaka from './components/PortalSaka';
-import PortalPusdiklatcab from './components/PortalPusdiklatcab';
-import LoginDewan from './components/LoginDewan';
 import ValidasiPendaftaran from './components/ValidasiPendaftaran';
 
 // Scroll to top or to hash element on route change

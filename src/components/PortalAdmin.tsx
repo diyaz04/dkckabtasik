@@ -86,8 +86,9 @@ export default function PortalAdmin() {
   const [agendaBulanRencana, setAgendaBulanRencana] = useState('2026-08');
   const [agendaSaving, setAgendaSaving] = useState(false);
 
-  // Form Builder state
+  // Form Builder & Dashboard state
   const [selectedBuilderAgenda, setSelectedBuilderAgenda] = useState<AgendaKegiatan | null>(null);
+  const [selectedDashboardAgenda, setSelectedDashboardAgenda] = useState<AgendaKegiatan | null>(null);
   const [formFields, setFormFields] = useState<any[]>([]);
   const [pendaftaranTipe, setPendaftaranTipe] = useState<'mandiri' | 'kolektif' | 'keduanya'>('keduanya');
   const [isQrValidasi, setIsQrValidasi] = useState(true);
@@ -565,6 +566,27 @@ export default function PortalAdmin() {
     }
   };
 
+  const handleOpenDashboard = async (agenda: AgendaKegiatan) => {
+    setSelectedDashboardAgenda(agenda);
+    try {
+      const configRes = await fetch(`/api/agenda/${agenda.id}/config`);
+      const config = await configRes.json();
+      if (config) {
+        setFormFields(config.form_schema || []);
+        setPendaftaranTipe(config.tipe_pendaftaran || 'keduanya');
+      } else {
+        setFormFields([]);
+      }
+
+      // Load registered participants
+      const registrantsRes = await fetch(`/api/agenda/${agenda.id}/registrants`);
+      const regs = await registrantsRes.json();
+      setRegistrants(regs);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Form Config Open Builder
   const handleOpenFormBuilder = async (agenda: AgendaKegiatan) => {
     setSelectedBuilderAgenda(agenda);
@@ -618,7 +640,7 @@ export default function PortalAdmin() {
   };
 
   const handleExportCSV = () => {
-    if (!selectedBuilderAgenda || registrants.length === 0) {
+    if (!selectedDashboardAgenda || registrants.length === 0) {
       alert("Tidak ada data pendaftar untuk diexport.");
       return;
     }
@@ -655,7 +677,7 @@ export default function PortalAdmin() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    const filename = `Data_Pendaftar_${selectedBuilderAgenda.nama_kegiatan.replace(/\s+/g, '_')}.csv`;
+    const filename = `Data_Pendaftar_${selectedDashboardAgenda.nama_kegiatan.replace(/\s+/g, '_')}.csv`;
     link.download = filename;
     link.click();
   };
@@ -1598,12 +1620,113 @@ export default function PortalAdmin() {
         {/* TAB 4: AGENDA KEGIATAN & FORM CONFIG BUILDER */}
         {activeTab === 'agenda' && (
           <div className="space-y-8">
-            <div className="border-b border-gray-200 pb-4">
-              <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Manajemen Agenda & Pendaftaran</h1>
-              <p className="text-xs text-gray-500 font-mono mt-1">Buat kegiatan baru, aktifkan portal pendaftaran online, dan rancang form dinamis.</p>
+            <div className="border-b border-gray-200 pb-4 flex justify-between items-center">
+              <div>
+                <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Manajemen Agenda & Pendaftaran</h1>
+                <p className="text-xs text-gray-500 font-mono mt-1">Buat kegiatan baru, aktifkan portal pendaftaran online, dan rancang form dinamis.</p>
+              </div>
+              {selectedDashboardAgenda && (
+                <button
+                  onClick={() => setSelectedDashboardAgenda(null)}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 cursor-pointer"
+                >
+                  Kembali ke Daftar
+                </button>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            {selectedDashboardAgenda ? (
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+                {(() => {
+                  const genderField = formFields.find(f => /kelamin|gender|jk/i.test(f.label));
+                  let maleCount = 0;
+                  let femaleCount = 0;
+                  if (genderField) {
+                    registrants.forEach(reg => {
+                      const val = String(reg.data_peserta[genderField.id] || '').toLowerCase();
+                      if (/^(laki|putra|pa|l)/i.test(val)) maleCount++;
+                      if (/^(perempuan|putri|pi|p)/i.test(val)) femaleCount++;
+                    });
+                  }
+
+                  const uniqueKwarran = new Set(registrants.map(r => r.kecamatan_id).filter(Boolean));
+                  const kwarranPercentage = kecamatanList.length > 0 
+                    ? Math.round((uniqueKwarran.size / kecamatanList.length) * 100) 
+                    : 0;
+
+                  return (
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-display font-extrabold text-xl text-brand-brown-dark tracking-tight">
+                          Dashboard Kegiatan: {selectedDashboardAgenda.nama_kegiatan}
+                        </h3>
+                        <button
+                          onClick={handleExportCSV}
+                          className="bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
+                        >
+                          <Download className="w-4 h-4" /> Export CSV/Excel
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Pendaftar</span>
+                          <span className="text-4xl font-display font-extrabold text-brand-orange">{registrants.length}</span>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm text-center">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Laki-laki / Perempuan</span>
+                          <span className="text-3xl font-display font-extrabold text-brand-green">
+                            {genderField ? `${maleCount}L / ${femaleCount}P` : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Keterwakilan Kwarran</span>
+                          <span className="text-4xl font-display font-extrabold text-brand-brown-dark">{kwarranPercentage}%</span>
+                          <span className="text-xs text-gray-400 mt-1">{uniqueKwarran.size} dari {kecamatanList.length} Kwarran</span>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-6 border-t border-gray-100">
+                        <h5 className="font-extrabold text-base text-brand-brown-dark tracking-tight mb-4">
+                          Data Pendaftar Terkonfirmasi
+                        </h5>
+                        
+                        {registrants.length > 0 ? (
+                          <div className="space-y-4 font-mono text-xs text-gray-700">
+                            {registrants.map((reg, idx) => (
+                              <div key={reg.id} className="p-4 bg-gray-50 border rounded-xl border-gray-150 shadow-sm hover:border-brand-green/30 transition-colors">
+                                <div className="flex justify-between items-center font-bold text-sm mb-3 text-brand-brown-dark border-b pb-2">
+                                  <span>Pendaftar #{idx+1} ({reg.tipe})</span>
+                                  <span className="text-gray-400 font-normal text-xs">{new Date(reg.created_at).toLocaleString('id-ID')}</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                                  {formFields.map((field) => (
+                                    <div key={field.id} className="flex justify-between border-b border-gray-100 py-1">
+                                      <span className="text-gray-400 text-[10px]">{field.label}:</span>
+                                      <strong className="text-gray-800">{reg.data_peserta[field.id] || '-'}</strong>
+                                    </div>
+                                  ))}
+                                  {/* Show kwarran origin if available */}
+                                  {reg.kecamatan_id && (
+                                    <div className="flex justify-between border-b border-brand-green/20 bg-brand-green/5 px-2 py-1.5 mt-2 sm:col-span-2 rounded">
+                                      <span className="text-brand-green font-bold text-[10px]">Asal Kwartir Ranting:</span>
+                                      <strong className="text-brand-green font-bold">{kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id}</strong>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic p-8 text-center bg-gray-50 rounded-2xl border border-dashed">Belum ada peserta yang mendaftar pada kegiatan ini.</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               
               {/* Left Form: Add Agenda */}
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-5">
@@ -1758,6 +1881,13 @@ export default function PortalAdmin() {
                           </button>
 
                           <button
+                            onClick={() => handleOpenDashboard(a)}
+                            className="bg-brand-orange/15 text-brand-orange border border-brand-orange/20 hover:bg-brand-orange/20 font-bold p-2 rounded-xl text-[10px] transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            Dashboard
+                          </button>
+
+                          <button
                             onClick={() => handleDeleteAgenda(a.id)}
                             className="bg-brand-red/15 text-brand-red border border-brand-red/20 hover:bg-brand-red/25 p-2 rounded-xl cursor-pointer"
                           >
@@ -1903,103 +2033,14 @@ export default function PortalAdmin() {
                         >
                           <Save className="w-4 h-4" /> Simpan Struktur Form
                         </button>
-                                {/* Kegiatan Dashboard & Registrants Viewer */}
-                      <div className="pt-6 border-t mt-6">
-                        {(() => {
-                          const genderField = formFields.find(f => /kelamin|gender|jk/i.test(f.label));
-                          let maleCount = 0;
-                          let femaleCount = 0;
-                          if (genderField) {
-                            registrants.forEach(reg => {
-                              const val = String(reg.data_peserta[genderField.id] || '').toLowerCase();
-                              if (/^(laki|putra|pa|l)/i.test(val)) maleCount++;
-                              if (/^(perempuan|putri|pi|p)/i.test(val)) femaleCount++;
-                            });
-                          }
-
-                          const uniqueKwarran = new Set(registrants.map(r => r.kecamatan_id).filter(Boolean));
-                          const kwarranPercentage = kecamatanList.length > 0 
-                            ? Math.round((uniqueKwarran.size / kecamatanList.length) * 100) 
-                            : 0;
-
-                          return (
-                            <div className="space-y-6">
-                              <div className="flex justify-between items-center">
-                                <h3 className="font-display font-extrabold text-xl text-brand-brown-dark tracking-tight">
-                                  Dashboard Kegiatan
-                                </h3>
-                                <button
-                                  onClick={handleExportCSV}
-                                  className="bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
-                                >
-                                  <Download className="w-4 h-4" /> Export CSV/Excel
-                                </button>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-center items-center shadow-sm">
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Pendaftar</span>
-                                  <span className="text-3xl font-display font-extrabold text-brand-orange">{registrants.length}</span>
-                                </div>
-                                <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-center items-center shadow-sm text-center">
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Laki-laki / Perempuan</span>
-                                  <span className="text-2xl font-display font-extrabold text-brand-green">
-                                    {genderField ? `${maleCount}L / ${femaleCount}P` : 'N/A'}
-                                  </span>
-                                </div>
-                                <div className="bg-white border border-gray-200 rounded-2xl p-4 flex flex-col justify-center items-center shadow-sm">
-                                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Keterwakilan Kwarran</span>
-                                  <span className="text-3xl font-display font-extrabold text-brand-brown-dark">{kwarranPercentage}%</span>
-                                  <span className="text-[10px] text-gray-400 mt-1">{uniqueKwarran.size} dari {kecamatanList.length} Kwarran</span>
-                                </div>
-                              </div>
-                              
-                              <div>
-                                <h5 className="font-extrabold text-sm text-brand-brown-dark tracking-tight mb-3 border-b pb-2">
-                                  Data Pendaftar Terkonfirmasi
-                                </h5>
-                                
-                                {registrants.length > 0 ? (
-                                  <div className="space-y-3 font-mono text-[10px] text-gray-700">
-                                    {registrants.map((reg, idx) => (
-                                      <div key={reg.id} className="p-3 bg-gray-50 border rounded-xl border-gray-150 shadow-sm hover:border-brand-green/30 transition-colors">
-                                        <div className="flex justify-between items-center font-bold text-[11px] mb-2 text-brand-brown-dark border-b pb-1">
-                                          <span>Pendaftar #{idx+1} ({reg.tipe})</span>
-                                          <span className="text-gray-400 font-normal">{new Date(reg.created_at).toLocaleString('id-ID')}</span>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
-                                          {formFields.map((field) => (
-                                            <div key={field.id} className="flex justify-between border-b border-gray-100 py-0.5">
-                                              <span className="text-gray-400 text-[10px]">{field.label}:</span>
-                                              <strong className="text-gray-800">{reg.data_peserta[field.id] || '-'}</strong>
-                                            </div>
-                                          ))}
-                                          {/* Show kwarran origin if available */}
-                                          {reg.kecamatan_id && (
-                                            <div className="flex justify-between border-b border-brand-green/20 bg-brand-green/5 px-1 py-0.5 mt-1 sm:col-span-2 rounded">
-                                              <span className="text-brand-green font-bold text-[10px]">Asal Kwartir Ranting:</span>
-                                              <strong className="text-brand-green font-bold">{kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id}</strong>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-xs text-gray-500 italic p-4 text-center bg-gray-50 rounded-xl border border-dashed">Belum ada peserta yang mendaftar pada kegiatan ini.</p>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>                </div>
-
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
             </div>
+            )}
           </div>
         )}
 
