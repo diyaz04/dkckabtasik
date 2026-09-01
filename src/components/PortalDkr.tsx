@@ -22,7 +22,6 @@ export default function PortalDkr() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
   const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   
   const [user, setUser] = useState<any>(null);
@@ -684,7 +683,6 @@ export default function PortalDkr() {
             </div>
           )}
         </div>
-      </div>
       </div>
 
       {/* 2. SIDEBAR BACKDROP (Mobile Only) */}
