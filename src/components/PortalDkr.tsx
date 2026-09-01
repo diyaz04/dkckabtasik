@@ -1668,7 +1668,7 @@ export default function PortalDkr() {
 
                       {/* Hidden PDF Template Container */}
                       <div style={{ display: 'none' }}>
-                        <LaporanPdfTemplate laporan={lap} profileDkr={dkrProfile} />
+                        <LaporanPdfTemplate laporan={lap} profileDkr={profile} />
                       </div>
                     </div>
                   ))}
