@@ -12,6 +12,18 @@ export default function LaporanPdfTemplate({ laporan, profileDkr }: Props) {
 
   return (
     <div id={`pdf-laporan-${laporan.id}`} className="bg-white text-black text-sm p-10 font-serif leading-relaxed" style={{ width: '210mm', minHeight: '297mm' }}>
+      <style>{`
+        #pdf-laporan-${laporan.id}, #pdf-laporan-${laporan.id} * {
+          border-color: #000000 !important;
+          color: #000000 !important;
+        }
+        #pdf-laporan-${laporan.id} .bg-gray-100 {
+          background-color: #f3f4f6 !important;
+        }
+        #pdf-laporan-${laporan.id} .bg-white {
+          background-color: #ffffff !important;
+        }
+      `}</style>
       
       {/* PAGE 1 */}
       <div className="pdf-page break-after-page mb-8">
