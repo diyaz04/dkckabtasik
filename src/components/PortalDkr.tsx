@@ -19,7 +19,11 @@ export default function PortalDkr() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [isNotifMenuOpen, setIsNotifMenuOpen] = useState(false);
   
   const [user, setUser] = useState<any>(null);
   const [kecamatan, setKecamatan] = useState<Kecamatan | null>(null);
@@ -178,6 +182,27 @@ export default function PortalDkr() {
       console.error(e);
     } finally {
       setLaporanLoading(false);
+    }
+  };
+
+  
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) return alert('Password minimal 6 karakter');
+    if (!user?.user_id) return alert('Gagal mengidentifikasi user. Silakan relogin.');
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.user_id, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert('Password berhasil diubah!');
+      setIsChangePasswordModalOpen(false);
+      setNewPassword('');
+    } catch (err: any) {
+      alert('Gagal merubah password: ' + err.message);
     }
   };
 
@@ -595,6 +620,11 @@ export default function PortalDkr() {
     }
   };
 
+  
+  const verifiedLaporanCount = laporanList.filter(l => l.status === 'diterima' || l.status === 'ditolak').length;
+  const verifiedBeritaCount = beritaList.filter(b => b.status === 'approved' || b.status === 'rejected').length;
+  const totalNotifs = verifiedLaporanCount + verifiedBeritaCount;
+
   return (
     <div className="min-h-screen bg-dash-canvas flex flex-col md:flex-row">
       
@@ -609,15 +639,52 @@ export default function PortalDkr() {
             <h2 className="font-extrabold text-[10px] sm:text-xs tracking-wider font-display text-gray-800 uppercase leading-tight mt-0.5">Ambacana Tatar Sukapura</h2>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button className="relative text-gray-500">
+        <div className="flex items-center gap-4 relative">
+          <button onClick={() => { setIsNotifMenuOpen(!isNotifMenuOpen); setIsProfileMenuOpen(false); }} className="relative text-gray-500 p-1">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            {totalNotifs > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>}
           </button>
-          <div className="w-8 h-8 rounded-full bg-brand-brown-dark flex items-center justify-center text-white text-xs font-bold shadow-md">
+          
+          {isNotifMenuOpen && (
+            <div className="absolute top-10 right-10 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 z-50">
+              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border-b pb-2 mb-2">Notifikasi</h4>
+              {totalNotifs === 0 ? (
+                <p className="text-xs text-gray-500 text-center py-4">Belum ada notifikasi baru</p>
+              ) : (
+                <div className="space-y-2">
+                  {verifiedLaporanCount > 0 && (
+                    <button onClick={() => { setActiveTab('laporan'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-brand-orange"></div>
+                      <span><strong>{verifiedLaporanCount} Laporan</strong> Anda telah ditinjau</span>
+                    </button>
+                  )}
+                  {verifiedBeritaCount > 0 && (
+                    <button onClick={() => { setActiveTab('berita'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-brand-green"></div>
+                      <span><strong>{verifiedBeritaCount} Ajuan Warta</strong> telah ditinjau</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <button onClick={() => { setIsProfileMenuOpen(!isProfileMenuOpen); setIsNotifMenuOpen(false); }} className="w-8 h-8 rounded-full bg-brand-brown-dark flex items-center justify-center text-white text-xs font-bold shadow-md cursor-pointer">
             DK
-          </div>
+          </button>
+
+          {isProfileMenuOpen && (
+            <div className="absolute top-10 right-0 w-48 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50">
+              <button onClick={() => { setIsChangePasswordModalOpen(true); setIsProfileMenuOpen(false); }} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-gray-50 text-xs font-bold text-gray-700">
+                Pengaturan Akun
+              </button>
+              <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 rounded-xl hover:bg-red-50 text-xs font-bold text-brand-red">
+                Keluar Sesi
+              </button>
+            </div>
+          )}
         </div>
+      </div>
       </div>
 
       {/* 2. SIDEBAR BACKDROP (Mobile Only) */}
@@ -1824,6 +1891,36 @@ export default function PortalDkr() {
       </main>
 
     
+      
+      {/* Change Password Modal */}
+      {isChangePasswordModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsChangePasswordModalOpen(false)}></div>
+          <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl">
+            <h3 className="text-lg font-black text-brand-brown-dark mb-1">Ganti Password</h3>
+            <p className="text-xs text-gray-500 mb-6">Masukkan password baru untuk akun Anda.</p>
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Password Baru</label>
+                <input 
+                  type="password" 
+                  required 
+                  minLength={6}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-brown-dark focus:ring-2 focus:ring-brand-brown-dark/20"
+                  placeholder="Minimal 6 karakter"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setIsChangePasswordModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100">Batal</button>
+                <button type="submit" className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-brown-dark hover:bg-brand-brown-dark/90 shadow-md">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 3. BOTTOM NAVIGATION (Mobile Only) */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40 px-6 py-2 pb-4 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] rounded-t-3xl">
         <div className="flex justify-between items-center relative mt-2">
