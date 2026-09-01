@@ -1227,16 +1227,18 @@ export default function PortalAdmin() {
           {activeTab === 'dashboard' && <GreetingBanner name={user?.nama || 'Administrator'} role={user?.role} />}
 
           {/* Search Bar (Mobile Style) */}
-          <div className="mt-6 mb-8 relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="w-5 h-5 text-gray-400" />
+          {activeTab === 'dashboard' && (
+            <div className="mt-6 mb-8 relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <Search className="w-5 h-5 text-gray-400" />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Cari menu atau layanan di sini..." 
+                className="w-full bg-white border border-gray-200/60 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
+              />
             </div>
-            <input 
-              type="text" 
-              placeholder="Cari menu atau layanan di sini..." 
-              className="w-full bg-white border border-gray-200/60 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium text-gray-700 shadow-sm focus:outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/20"
-            />
-          </div>
+          )}
 
         {/* TAB 1: DASHBOARD REKAP */}
         {activeTab === 'dashboard' && (
