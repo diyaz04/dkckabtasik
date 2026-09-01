@@ -701,8 +701,8 @@ export default function PortalDkr() {
         />
       )}
 
-      {/* Desktop Sidebar (Desktop Only) */}
-      <aside className={`hidden md:flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-brand-brown-dark text-white border-r-4 border-brand-green flex-col shrink-0`}>
+      {/* Sidebar (Desktop & Mobile) */}
+      <aside className={`fixed md:relative inset-y-0 left-0 z-50 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 flex ${isSidebarCollapsed ? 'w-20' : 'w-64'} transition-all duration-300 bg-brand-brown-dark text-white border-r-4 border-brand-green flex-col shrink-0`}>
         <div className="p-5 border-b border-white/10 flex flex-col items-center relative">
           <div className={`flex items-center gap-3 w-full ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
