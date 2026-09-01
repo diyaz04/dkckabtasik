@@ -876,6 +876,11 @@ export default function PortalAdmin() {
     }
   };
 
+  
+  const pendingLaporanCount = laporanList.filter(l => l.status === 'pending').length;
+  const pendingBeritaCount = beritaList.filter(b => b.status === 'pending').length;
+  const totalNotifs = pendingLaporanCount + pendingBeritaCount;
+
   const totalPenegak = dataPotensial.reduce((acc, curr) => acc + curr.jumlah_penegak_l + curr.jumlah_penegak_p, 0);
   const totalPandega = dataPotensial.reduce((acc, curr) => acc + curr.jumlah_pandega_l + curr.jumlah_pandega_p, 0);
 
