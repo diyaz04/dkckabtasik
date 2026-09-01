@@ -90,6 +90,8 @@ export default function PortalAdmin() {
   const [selectedBuilderAgenda, setSelectedBuilderAgenda] = useState<AgendaKegiatan | null>(null);
   const [formFields, setFormFields] = useState<any[]>([]);
   const [pendaftaranTipe, setPendaftaranTipe] = useState<'mandiri' | 'kolektif' | 'keduanya'>('keduanya');
+  const [isQrValidasi, setIsQrValidasi] = useState(true);
+  const [isQrCheckin, setIsQrCheckin] = useState(false);
   const [registrants, setRegistrants] = useState<any[]>([]);
 
   // User management states
@@ -572,12 +574,16 @@ export default function PortalAdmin() {
       if (config) {
         setFormFields(config.form_schema || []);
         setPendaftaranTipe(config.tipe_pendaftaran || 'keduanya');
+        setIsQrValidasi(config.is_qr_validasi ?? true);
+        setIsQrCheckin(config.is_qr_checkin ?? false);
       } else {
         setFormFields([
           { id: 'f1', label: 'Nama Lengkap Pendaftar', type: 'text', required: true },
           { id: 'f2', label: 'Asal Gugus Depan', type: 'text', required: true }
         ]);
         setPendaftaranTipe('keduanya');
+        setIsQrValidasi(true);
+        setIsQrCheckin(false);
       }
 
       // Load registered participants
@@ -598,7 +604,9 @@ export default function PortalAdmin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           form_schema: formFields,
-          tipe_pendaftaran: pendaftaranTipe
+          tipe_pendaftaran: pendaftaranTipe,
+          is_qr_validasi: isQrValidasi,
+          is_qr_checkin: isQrCheckin
         })
       });
       if (res.ok) {
@@ -1779,16 +1787,29 @@ export default function PortalAdmin() {
 
                     {/* Form Builder configuration */}
                     <div className="space-y-4">
-                      <div className="flex gap-4 items-center">
-                        <label className="text-xs font-bold font-mono text-gray-600 shrink-0">Tipe Pendaftaran:</label>
-                        <select 
-                          value={pendaftaranTipe} onChange={(e) => setPendaftaranTipe(e.target.value as any)}
-                          className="bg-gray-50 border rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-gray-800"
-                        >
-                          <option value="mandiri">Mandiri Sahaja (Perorangan)</option>
-                          <option value="kolektif">Kolektif Kontingen (Ranting/Gudep)</option>
-                          <option value="keduanya">Keduanya (Bisa memilih)</option>
-                        </select>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6 border-b pb-4 mb-4">
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold font-mono text-gray-600 shrink-0">Tipe Pendaftaran:</label>
+                          <select 
+                            value={pendaftaranTipe} onChange={(e) => setPendaftaranTipe(e.target.value as any)}
+                            className="bg-gray-50 border rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-gray-800"
+                          >
+                            <option value="mandiri">Mandiri Sahaja (Perorangan)</option>
+                            <option value="kolektif">Kolektif Kontingen (Ranting/Gudep)</option>
+                            <option value="keduanya">Keduanya (Bisa memilih)</option>
+                          </select>
+                        </div>
+                        
+                        <div className="flex flex-col gap-1 border-l pl-0 sm:pl-6">
+                          <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                            <input type="checkbox" checked={isQrValidasi} onChange={(e) => setIsQrValidasi(e.target.checked)} className="rounded text-brand-green focus:ring-brand-green" />
+                            Tampilkan QR Validasi di PDF
+                          </label>
+                          <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                            <input type="checkbox" checked={isQrCheckin} onChange={(e) => setIsQrCheckin(e.target.checked)} className="rounded text-brand-green focus:ring-brand-green" />
+                            Tampilkan QR Check-in di PDF
+                          </label>
+                        </div>
                       </div>
 
                       {/* Fields Designer list */}

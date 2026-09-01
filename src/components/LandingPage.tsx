@@ -5,6 +5,8 @@ import {
   MapPin, CheckCircle2, ChevronDown, Download, Eye, AlertCircle,
   Heart, Share2, X, Copy, Check
 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
+import BuktiPendaftaranPdfTemplate from './BuktiPendaftaranPdfTemplate';
 import { motion, AnimatePresence, useScroll, useVelocity, useTransform, useSpring, useMotionValue, useAnimationFrame } from 'motion/react';
 import InteractiveMap from './InteractiveMap';
 import { 
@@ -267,6 +269,8 @@ export default function LandingPage() {
     setRegistrationFormData(prev => ({ ...prev, [fieldId]: value }));
   };
 
+  const [pendaftaranId, setPendaftaranId] = useState<string>('');
+
   const submitRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAgenda) return;
@@ -284,6 +288,8 @@ export default function LandingPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        setPendaftaranId(data.id);
         setRegisterSuccess(true);
       } else {
         alert('Gagal mengirim pendaftaran, silakan coba lagi.');
@@ -293,6 +299,21 @@ export default function LandingPage() {
     } finally {
       setRegisterLoading(false);
     }
+  };
+
+  const handleDownloadBuktiPendaftaran = () => {
+    const element = document.getElementById('pdf-bukti-pendaftaran');
+    if (!element) return;
+    
+    const opt = {
+      margin:       0,
+      filename:     `Bukti_Pendaftaran_${selectedAgenda?.nama_kegiatan || 'Kegiatan'}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(element).save();
   };
 
   // Like and Share States
@@ -1607,12 +1628,36 @@ export default function LandingPage() {
                   <p className="text-sm text-gray-500 max-w-sm mx-auto">
                     Data kontingen atau kepesertaan mandiri Anda telah sukses tersimpan di pangkalan database DKC Tasikmalaya.
                   </p>
-                  <button
-                    onClick={() => setSelectedAgenda(null)}
-                    className="bg-brand-brown-dark text-white text-xs font-bold px-6 py-2.5 rounded-full hover:bg-brand-brown-mid"
-                  >
-                    Tutup Jendela
-                  </button>
+                  
+                  <div className="flex flex-col gap-3 justify-center items-center mt-6">
+                    <button
+                      onClick={handleDownloadBuktiPendaftaran}
+                      className="bg-brand-orange text-white text-xs font-bold px-6 py-2.5 rounded-full hover:bg-orange-600 flex items-center gap-2 shadow-md shadow-brand-orange/20"
+                    >
+                      <Download className="w-4 h-4" /> Download Bukti Pendaftaran (PDF)
+                    </button>
+                    <button
+                      onClick={() => setSelectedAgenda(null)}
+                      className="bg-gray-100 text-gray-600 text-xs font-bold px-6 py-2.5 rounded-full hover:bg-gray-200"
+                    >
+                      Tutup Jendela
+                    </button>
+                  </div>
+
+                  {/* Hidden PDF Template rendered to be captured by html2pdf */}
+                  <div className="hidden">
+                    <BuktiPendaftaranPdfTemplate 
+                      pendaftaranId={pendaftaranId}
+                      agendaName={selectedAgenda.nama_kegiatan}
+                      waktuDaftar={new Date().toLocaleString('id-ID')}
+                      tipePendaftaran={registrationType}
+                      asalKwarran={registrationFormData['f2'] || ''} // Fallback for asal kwarran if configured
+                      formData={registrationFormData}
+                      formFields={agendaConfig?.form_schema || []}
+                      isQrValidasi={agendaConfig?.is_qr_validasi ?? true}
+                      isQrCheckin={agendaConfig?.is_qr_checkin ?? false}
+                    />
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={submitRegistration} className="space-y-5">

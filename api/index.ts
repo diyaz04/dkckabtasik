@@ -570,12 +570,12 @@ app.get('/api/agenda/:id/config', async (req: Request, res: Response) => {
 app.post('/api/agenda/:id/config', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { form_schema, tipe_pendaftaran } = req.body;
+    const { form_schema, tipe_pendaftaran, is_qr_validasi = true, is_qr_checkin = false } = req.body;
     const { data: existing } = await supabaseAdmin.from('form_kegiatan_config').select('id').eq('agenda_id', id).maybeSingle();
     if (existing) {
-      await supabaseAdmin.from('form_kegiatan_config').update({ form_schema, tipe_pendaftaran }).eq('agenda_id', id);
+      await supabaseAdmin.from('form_kegiatan_config').update({ form_schema, tipe_pendaftaran, is_qr_validasi, is_qr_checkin }).eq('agenda_id', id);
     } else {
-      await supabaseAdmin.from('form_kegiatan_config').insert({ agenda_id: id, form_schema, tipe_pendaftaran });
+      await supabaseAdmin.from('form_kegiatan_config').insert({ agenda_id: id, form_schema, tipe_pendaftaran, is_qr_validasi, is_qr_checkin });
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -587,13 +587,15 @@ app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { tipe, kecamatan_id, data_peserta } = req.body;
-    await supabaseAdmin.from('pendaftaran_peserta').insert({
+    const { data, error } = await supabaseAdmin.from('pendaftaran_peserta').insert({
       agenda_id: id,
       tipe,
       kecamatan_id,
       data_peserta
-    });
-    res.json({ success: true });
+    }).select('id').single();
+    
+    if (error) throw error;
+    res.json({ success: true, id: data.id });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -604,6 +606,31 @@ app.get('/api/agenda/:id/registrants', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { data } = await supabaseAdmin.from('pendaftaran_peserta').select('*').eq('agenda_id', id);
     res.json(data || []);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/pendaftaran/validate/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { data: pendaftaran, error } = await supabaseAdmin
+      .from('pendaftaran_peserta')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !pendaftaran) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
+    const { data: agenda } = await supabaseAdmin
+      .from('agenda_kegiatan')
+      .select('nama_kegiatan')
+      .eq('id', pendaftaran.agenda_id)
+      .maybeSingle();
+
+    res.json({ pendaftaran, agenda });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
