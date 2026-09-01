@@ -923,7 +923,7 @@ export default function PortalAdmin() {
               {!isSidebarCollapsed && (
                 <div className="text-left">
                   <h2 className="font-display font-black text-xs tracking-tight text-white uppercase leading-tight">DKC TASIKMALAYA</h2>
-                  <p className="text-[9px] text-[#A7F3D0] font-mono mt-0.5 tracking-wider uppercase leading-none">NUR SAKTI BUANA</p>
+                  <p className="text-[9px] text-[#A7F3D0] font-mono mt-0.5 tracking-wider uppercase leading-none">AMBACANA TATAR SUKAPURA</p>
                 </div>
               )}
             </div>
