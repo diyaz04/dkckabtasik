@@ -888,7 +888,10 @@ export default function PortalAdmin() {
           <button onClick={() => setIsMobileMenuOpen(true)} className="text-gray-800 p-1">
             <Menu className="w-6 h-6" />
           </button>
-          <h2 className="font-black text-sm tracking-widest font-mono text-gray-800 uppercase">ESKAHADE</h2>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
+            <h2 className="font-extrabold text-[10px] sm:text-xs tracking-wider font-display text-gray-800 uppercase leading-tight mt-0.5">Ambacana Tatar Sukapura</h2>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <button className="relative text-gray-500">
