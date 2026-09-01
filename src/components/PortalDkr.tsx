@@ -840,7 +840,7 @@ export default function PortalDkr() {
       {/* Main Panel Content */}
       <main className="flex-1 p-6 sm:p-10 overflow-y-auto">
         
-        <GreetingBanner name={user?.nama || 'Pengurus DKR'} role={user?.role} />
+        {activeTab === 'dashboard' && <GreetingBanner name={user?.nama || 'Pengurus DKR'} role={user?.role} />}
 
         {/* DKR TAB 1: DASHBOARD RANTING */}
         {activeTab === 'dashboard' && (

@@ -1224,7 +1224,7 @@ export default function PortalAdmin() {
             )}
           </div>
 
-          <GreetingBanner name={user?.nama || 'Administrator'} role={user?.role} />
+          {activeTab === 'dashboard' && <GreetingBanner name={user?.nama || 'Administrator'} role={user?.role} />}
 
           {/* Search Bar (Mobile Style) */}
           <div className="mt-6 mb-8 relative">
