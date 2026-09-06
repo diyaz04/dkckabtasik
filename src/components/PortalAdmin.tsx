@@ -10,8 +10,9 @@ import {
   Informasi, SiteContent, FormKegiatanConfig, DataPotensial, Profile, Saka, LaporanKegiatan 
 } from '../types';
 import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/imageUpload';
-import SiteContentEditor from './SiteContentEditor';
-import GreetingBanner from './GreetingBanner';
+import * as XLSX from 'xlsx';
+import CheckinScanner from './CheckinScanner';
+import { ScanLine, CheckCircle } from 'lucide-react';
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
@@ -96,6 +97,7 @@ export default function PortalAdmin() {
   const [isQrValidasi, setIsQrValidasi] = useState(true);
   const [isQrCheckin, setIsQrCheckin] = useState(false);
   const [registrants, setRegistrants] = useState<any[]>([]);
+  const [showScanner, setShowScanner] = useState(false);
 
   // User management states
   const [newEmail, setNewEmail] = useState('');
@@ -653,16 +655,16 @@ export default function PortalAdmin() {
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportExcel = () => {
     if (!selectedDashboardAgenda || registrants.length === 0) {
       alert("Tidak ada data pendaftar untuk diexport.");
       return;
     }
 
-    const headerCols = ['No', 'Waktu Daftar', 'Tipe Pendaftaran', 'Asal Kwarran'];
+    const headerCols = ['No', 'Waktu Daftar', 'Status Kehadiran', 'Waktu Hadir', 'Tipe Pendaftaran', 'Asal Kwarran'];
     formFields.forEach(f => headerCols.push(f.label));
     
-    const rows: string[][] = [];
+    const rows: any[][] = [];
     rows.push(headerCols);
 
     registrants.forEach((reg, index) => {
@@ -670,30 +672,52 @@ export default function PortalAdmin() {
         ? (kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id)
         : '-';
 
+      const isHadir = reg.data_peserta._is_hadir ? 'HADIR' : 'BELUM HADIR';
+      const waktuHadir = reg.data_peserta._waktu_hadir ? new Date(reg.data_peserta._waktu_hadir).toLocaleString('id-ID') : '-';
+
       const rowData = [
         (index + 1).toString(),
         new Date(reg.created_at).toLocaleString('id-ID'),
+        isHadir,
+        waktuHadir,
         reg.tipe,
         kwarran
       ];
 
       formFields.forEach(f => {
-        const val = reg.data_peserta[f.id] || '-';
-        const cleanVal = String(val).replace(/"/g, '""').replace(/\n/g, ' ');
-        rowData.push(`"${cleanVal}"`);
+        rowData.push(reg.data_peserta[f.id] || '-');
       });
 
       rows.push(rowData);
     });
 
-    const csvContent = rows.map(r => r.join(',')).join('\n');
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Pendaftar');
+    const filename = `Data_Pendaftar_${selectedDashboardAgenda.nama_kegiatan.replace(/\s+/g, '_')}.xlsx`;
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    const filename = `Data_Pendaftar_${selectedDashboardAgenda.nama_kegiatan.replace(/\s+/g, '_')}.csv`;
-    link.download = filename;
-    link.click();
+    XLSX.writeFile(workbook, filename);
+  };
+
+  const handleScanSuccess = async (decodedText: string) => {
+    // decodedText is the ID of the pendaftaran
+    try {
+      const res = await fetch(`/api/pendaftaran/checkin/${decodedText}`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert('Check-in Berhasil!');
+        // Reload data registrants if dashboard is open
+        if (selectedDashboardAgenda) {
+          handleOpenDashboard(selectedDashboardAgenda);
+        }
+      } else {
+        alert('Gagal check-in atau ID pendaftar tidak valid.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Terjadi kesalahan saat check-in.');
+    }
   };
 
   // Toggle Pendaftaran Aktif
@@ -1679,13 +1703,31 @@ export default function PortalAdmin() {
                             Dashboard Kegiatan: {selectedDashboardAgenda.nama_kegiatan}
                           </h3>
                         </div>
-                        <button
-                          onClick={handleExportCSV}
-                          className="bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
-                        >
-                          <Download className="w-4 h-4" /> Export CSV/Excel
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowScanner(true)}
+                            className="bg-brand-brown-dark hover:bg-brand-brown-dark/90 text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
+                          >
+                            <ScanLine className="w-4 h-4" /> Scan Hadir
+                          </button>
+                          <button
+                            onClick={handleExportExcel}
+                            className="bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
+                          >
+                            <Download className="w-4 h-4" /> Export Excel
+                          </button>
+                        </div>
                       </div>
+
+                      {showScanner && (
+                        <CheckinScanner 
+                          onClose={() => setShowScanner(false)} 
+                          onScanSuccess={(code) => {
+                            setShowScanner(false);
+                            handleScanSuccess(code);
+                          }} 
+                        />
+                      )}
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
@@ -1715,7 +1757,14 @@ export default function PortalAdmin() {
                             {registrants.map((reg, idx) => (
                               <div key={reg.id} className="p-4 bg-gray-50 border rounded-xl border-gray-150 shadow-sm hover:border-brand-green/30 transition-colors">
                                 <div className="flex justify-between items-center font-bold text-sm mb-3 text-brand-brown-dark border-b pb-2">
-                                  <span>Pendaftar #{idx+1} ({reg.tipe})</span>
+                                  <div className="flex items-center gap-2">
+                                    <span>Pendaftar #{idx+1} ({reg.tipe})</span>
+                                    {reg.data_peserta?._is_hadir && (
+                                      <span className="bg-brand-green/10 text-brand-green px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border border-brand-green/20 flex items-center gap-1">
+                                        <CheckCircle className="w-3 h-3" /> Hadir
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="text-gray-400 font-normal text-xs">{new Date(reg.created_at).toLocaleString('id-ID')}</span>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
