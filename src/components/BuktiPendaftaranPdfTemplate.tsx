@@ -4,6 +4,7 @@ import QRCode from 'react-qr-code';
 interface Props {
   pendaftaranId: string;
   agendaName: string;
+  agendaLogo?: string;
   waktuDaftar: string;
   tipePendaftaran: string;
   asalKwarran: string;
@@ -14,7 +15,7 @@ interface Props {
 }
 
 export default function BuktiPendaftaranPdfTemplate({ 
-  pendaftaranId, agendaName, waktuDaftar, tipePendaftaran, asalKwarran, formData, formFields, isQrValidasi, isQrCheckin 
+  pendaftaranId, agendaName, agendaLogo, waktuDaftar, tipePendaftaran, asalKwarran, formData, formFields, isQrValidasi, isQrCheckin 
 }: Props) {
   const origin = window.location.origin;
 
@@ -29,9 +30,14 @@ export default function BuktiPendaftaranPdfTemplate({
       
       {/* Header */}
       <div className="flex justify-between items-center border-b-2 border-black pb-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-black uppercase tracking-tight">Bukti Pendaftaran</h1>
-          <p className="text-sm font-bold mt-1">{agendaName}</p>
+        <div className="flex items-center gap-4">
+          {agendaLogo && (
+            <img src={agendaLogo} alt="Logo Kegiatan" crossOrigin="anonymous" className="w-16 h-16 object-contain" />
+          )}
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-tight">Bukti Pendaftaran</h1>
+            <p className="text-sm font-bold mt-1">{agendaName}</p>
+          </div>
         </div>
         <div className="text-right">
           <p className="text-xs font-mono">ID: {pendaftaranId.split('-')[0].toUpperCase()}</p>
@@ -76,7 +82,7 @@ export default function BuktiPendaftaranPdfTemplate({
           {isQrValidasi && (
             <div className="flex flex-col items-center text-center">
               <div className="p-2 border-2 border-black rounded-lg inline-block bg-white">
-                <QRCode value={`${origin}/validasi-pendaftaran/${pendaftaranId}`} size={120} level="M" />
+                <QRCode value={`${origin}/#/validasi-pendaftaran/${pendaftaranId}`} size={120} level="M" />
               </div>
               <p className="text-xs font-bold mt-2 uppercase">Scan Validasi</p>
               <p className="text-[9px] w-32 mt-1">Gunakan kamera HP untuk memvalidasi dokumen ini.</p>

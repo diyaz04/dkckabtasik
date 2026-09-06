@@ -106,6 +106,7 @@ export interface AgendaKegiatan {
   id: string;
   nama_kegiatan: string;
   tempat: string;
+  logo_url?: string;
   tanggal_mulai: string;
   tanggal_selesai: string;
   estimasi_peserta: number;

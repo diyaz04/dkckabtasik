@@ -1649,6 +1649,7 @@ export default function LandingPage() {
                     <BuktiPendaftaranPdfTemplate 
                       pendaftaranId={pendaftaranId}
                       agendaName={selectedAgenda.nama_kegiatan}
+                      agendaLogo={selectedAgenda.logo_url}
                       waktuDaftar={new Date().toLocaleString('id-ID')}
                       tipePendaftaran={registrationType}
                       asalKwarran={registrationFormData['f2'] || ''} // Fallback for asal kwarran if configured

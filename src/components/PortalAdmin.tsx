@@ -84,6 +84,8 @@ export default function PortalAdmin() {
   const [agendaLevel, setAgendaLevel] = useState<'kabupaten' | 'provinsi' | 'nasional' | 'internasional'>('kabupaten');
   const [agendaIsDateDecided, setAgendaIsDateDecided] = useState(true);
   const [agendaBulanRencana, setAgendaBulanRencana] = useState('2026-08');
+  const [agendaLogoUrl, setAgendaLogoUrl] = useState('');
+  const [agendaLogoUploading, setAgendaLogoUploading] = useState(false);
   const [agendaSaving, setAgendaSaving] = useState(false);
 
   // Form Builder & Dashboard state
@@ -374,9 +376,13 @@ export default function PortalAdmin() {
   };
 
   // Kompres gambar di browser lalu upload ke Cloudinary (tidak ada lagi paste link manual)
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'news' | 'informasi' | 'hero' | 'personalia') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'news' | 'informasi' | 'hero' | 'personalia' | 'agendaLogo') => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (target === 'agendaLogo') {
+      setAgendaLogoUploading(true);
+    }
 
     try {
       const url = await compressAndUploadFile(file, 'gambar');
@@ -386,10 +392,16 @@ export default function PortalAdmin() {
         setHeroBgImageUrl(url);
       } else if (target === 'personalia') {
         setNewPersonFoto(url);
+      } else if (target === 'agendaLogo') {
+        setAgendaLogoUrl(url);
       }
     } catch (err) {
       console.error(err);
       alert('Gagal mengunggah/kompres gambar. Coba lagi ya bro.');
+    } finally {
+      if (target === 'agendaLogo') {
+        setAgendaLogoUploading(false);
+      }
     }
   };
 
@@ -528,7 +540,8 @@ export default function PortalAdmin() {
           status_publikasi: true,
           is_aktif_pendaftaran: false,
           is_tanggal_diputuskan: agendaIsDateDecided,
-          bulan_rencana: agendaBulanRencana
+          bulan_rencana: agendaBulanRencana,
+          logo_url: agendaLogoUrl
         })
       });
 
@@ -539,6 +552,7 @@ export default function PortalAdmin() {
         setAgendaEnd('');
         setAgendaEst(100);
         setAgendaIsDateDecided(true);
+        setAgendaLogoUrl('');
         alert('Agenda kegiatan berhasil ditambahkan!');
         loadData();
       }
@@ -1657,9 +1671,14 @@ export default function PortalAdmin() {
                   return (
                     <div className="space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="font-display font-extrabold text-xl text-brand-brown-dark tracking-tight">
-                          Dashboard Kegiatan: {selectedDashboardAgenda.nama_kegiatan}
-                        </h3>
+                        <div className="flex items-center gap-4">
+                          {selectedDashboardAgenda.logo_url && (
+                            <img src={selectedDashboardAgenda.logo_url} alt="Logo Kegiatan" className="w-12 h-12 rounded-xl object-cover shadow-sm border border-gray-100" />
+                          )}
+                          <h3 className="font-display font-extrabold text-xl text-brand-brown-dark tracking-tight">
+                            Dashboard Kegiatan: {selectedDashboardAgenda.nama_kegiatan}
+                          </h3>
+                        </div>
                         <button
                           onClick={handleExportCSV}
                           className="bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
@@ -1741,6 +1760,20 @@ export default function PortalAdmin() {
                       type="text" required value={agendaName} onChange={(e) => setAgendaName(e.target.value)}
                       placeholder="Nama kegiatan" className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Logo Kegiatan (Opsional)</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'agendaLogo')}
+                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-[10px] text-gray-500 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
+                      />
+                      {agendaLogoUploading && <span className="text-[10px] text-brand-orange animate-pulse whitespace-nowrap">Uploading...</span>}
+                      {agendaLogoUrl && !agendaLogoUploading && <span className="text-[10px] text-brand-green whitespace-nowrap">Tersimpan</span>}
+                    </div>
                   </div>
 
                   <div>
