@@ -2032,18 +2032,50 @@ export default function PortalAdmin() {
                             {/* Dropdown Options details */}
                             {field.type === 'select' && (
                               <div className="w-full pt-2 border-t border-dashed mt-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Opsi Dropdown (Satu per baris)</label>
-                                <textarea
-                                  rows={2}
-                                  value={field.options?.join('\n') || ''}
-                                  onChange={(e) => {
-                                    const list = [...formFields];
-                                    list[idx].options = e.target.value.split('\n').filter(o => o.trim());
-                                    setFormFields(list);
-                                  }}
-                                  placeholder="Sebutkan opsi..."
-                                  className="w-full bg-white border rounded px-3 py-1.5 text-xs text-gray-800"
-                                />
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Opsi Dropdown</label>
+                                <div className="space-y-2">
+                                  {(field.options || []).map((opt: string, optIdx: number) => (
+                                    <div key={optIdx} className="flex items-center gap-2">
+                                      <input
+                                        type="text"
+                                        value={opt}
+                                        onChange={(e) => {
+                                          const list = [...formFields];
+                                          const newOptions = [...(list[idx].options || [])];
+                                          newOptions[optIdx] = e.target.value;
+                                          list[idx].options = newOptions;
+                                          setFormFields(list);
+                                        }}
+                                        placeholder={`Opsi ${optIdx + 1}`}
+                                        className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-brand-orange"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const list = [...formFields];
+                                          const newOptions = [...(list[idx].options || [])];
+                                          newOptions.splice(optIdx, 1);
+                                          list[idx].options = newOptions;
+                                          setFormFields(list);
+                                        }}
+                                        className="text-gray-400 hover:text-brand-red p-1 rounded-lg"
+                                      >
+                                        <Trash className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const list = [...formFields];
+                                      list[idx].options = [...(list[idx].options || []), ''];
+                                      setFormFields(list);
+                                    }}
+                                    className="text-[10px] font-bold text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20 px-3 py-1.5 rounded-lg flex items-center gap-1 mt-1 transition-colors cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3" /> Tambah Opsi
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
