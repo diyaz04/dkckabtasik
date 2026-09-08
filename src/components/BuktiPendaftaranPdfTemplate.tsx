@@ -19,7 +19,8 @@ interface Props {
 }
 
 export default function BuktiPendaftaranPdfTemplate({ 
-  pendaftaranId, agendaName, agendaLogo, waktuDaftar, tipePendaftaran, asalKwarran, formData, formFields, isQrValidasi, isQrCheckin 
+  pendaftaranId, agendaName, agendaLogo, waktuDaftar, tipePendaftaran, asalKwarran, formData, formFields, isQrValidasi, isQrCheckin,
+  kolektifPeserta, kolektifIds, isCampFeeRequired, buktiPaymentUrl
 }: Props) {
   const origin = window.location.origin;
 
