@@ -611,6 +611,39 @@ app.get('/api/agenda/:id/registrants', async (req: Request, res: Response) => {
   }
 });
 
+// Batch registration for collective (kolektif) enrollment
+app.post('/api/agenda/:id/register-batch', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { peserta_list, kecamatan_id, bukti_bayar_url } = req.body;
+    // peserta_list: Array<{ data_peserta: Record<string, any> }>
+    
+    if (!peserta_list || !Array.isArray(peserta_list) || peserta_list.length === 0) {
+      return res.status(400).json({ error: 'Daftar peserta tidak boleh kosong' });
+    }
+
+    const rows = peserta_list.map((p: any) => ({
+      agenda_id: id,
+      tipe: 'kolektif',
+      kecamatan_id: kecamatan_id || null,
+      data_peserta: {
+        ...p.data_peserta,
+        ...(bukti_bayar_url ? { _bukti_bayar: bukti_bayar_url } : {})
+      }
+    }));
+
+    const { data, error } = await supabaseAdmin
+      .from('pendaftaran_peserta')
+      .insert(rows)
+      .select('id');
+
+    if (error) throw error;
+    res.json({ success: true, ids: data?.map((d: any) => d.id) || [] });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/pendaftaran/validate/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

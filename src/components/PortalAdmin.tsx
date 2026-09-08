@@ -87,6 +87,8 @@ export default function PortalAdmin() {
   const [agendaBulanRencana, setAgendaBulanRencana] = useState('2026-08');
   const [agendaLogoUrl, setAgendaLogoUrl] = useState('');
   const [agendaLogoUploading, setAgendaLogoUploading] = useState(false);
+  const [agendaIsCampFee, setAgendaIsCampFee] = useState(false);
+  const [agendaCampFee, setAgendaCampFee] = useState(0);
   const [agendaSaving, setAgendaSaving] = useState(false);
 
   // Form Builder & Dashboard state
@@ -543,7 +545,9 @@ export default function PortalAdmin() {
           is_aktif_pendaftaran: false,
           is_tanggal_diputuskan: agendaIsDateDecided,
           bulan_rencana: agendaBulanRencana,
-          logo_url: agendaLogoUrl
+          logo_url: agendaLogoUrl,
+          camp_fee: agendaIsCampFee ? agendaCampFee : 0,
+          is_camp_fee_required: agendaIsCampFee
         })
       });
 
@@ -555,6 +559,8 @@ export default function PortalAdmin() {
         setAgendaEst(100);
         setAgendaIsDateDecided(true);
         setAgendaLogoUrl('');
+        setAgendaIsCampFee(false);
+        setAgendaCampFee(0);
         alert('Agenda kegiatan berhasil ditambahkan!');
         loadData();
       }
@@ -1905,6 +1911,35 @@ export default function PortalAdmin() {
                       type="number" required value={agendaEst} onChange={(e) => setAgendaEst(Number(e.target.value))}
                       className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
                     />
+                  </div>
+
+                  {/* Camp Fee Configuration */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="agendaIsCampFee"
+                        checked={agendaIsCampFee}
+                        onChange={(e) => setAgendaIsCampFee(e.target.checked)}
+                        className="w-4 h-4 text-brand-orange border-slate-300 rounded focus:ring-brand-orange"
+                      />
+                      <label htmlFor="agendaIsCampFee" className="text-[10px] font-bold text-amber-700 uppercase cursor-pointer select-none">
+                        Ada Camp Fee / Biaya Peserta?
+                      </label>
+                    </div>
+                    {agendaIsCampFee && (
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nominal Camp Fee (Rp)</label>
+                        <input
+                          type="number"
+                          value={agendaCampFee}
+                          onChange={(e) => setAgendaCampFee(Number(e.target.value))}
+                          placeholder="Contoh: 150000"
+                          className="w-full bg-white border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-brand-orange focus:ring-2 focus:ring-brand-orange/10 transition-all"
+                        />
+                        <p className="text-[9px] text-amber-600 mt-1 font-mono">Peserta wajib upload bukti pembayaran saat mendaftar.</p>
+                      </div>
+                    )}
                   </div>
 
                   <button

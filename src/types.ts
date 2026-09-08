@@ -120,6 +120,8 @@ export interface AgendaKegiatan {
   is_aktif_pendaftaran: boolean;
   is_tanggal_diputuskan?: boolean;
   bulan_rencana?: string; // Format: 'YYYY-MM', e.g. '2026-08'
+  camp_fee?: number;
+  is_camp_fee_required?: boolean;
 }
 
 export interface FormFieldConfig {
@@ -135,6 +137,8 @@ export interface FormKegiatanConfig {
   agenda_id: string;
   form_schema: FormFieldConfig[];
   tipe_pendaftaran: 'mandiri' | 'kolektif' | 'keduanya';
+  is_qr_validasi?: boolean;
+  is_qr_checkin?: boolean;
 }
 
 export interface PendaftaranPeserta {

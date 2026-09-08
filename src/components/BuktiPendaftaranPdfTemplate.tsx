@@ -12,6 +12,10 @@ interface Props {
   formFields: any[];
   isQrValidasi: boolean;
   isQrCheckin: boolean;
+  kolektifPeserta?: any[];
+  kolektifIds?: string[];
+  isCampFeeRequired?: boolean;
+  buktiPaymentUrl?: string;
 }
 
 export default function BuktiPendaftaranPdfTemplate({ 
@@ -57,23 +61,60 @@ export default function BuktiPendaftaranPdfTemplate({
               <td className="w-40 font-bold py-1">Asal Kwartir Ranting</td>
               <td>: {asalKwarran || '-'}</td>
             </tr>
+            {isCampFeeRequired && (
+              <tr>
+                <td className="w-40 font-bold py-1">Bukti Pembayaran</td>
+                <td>: {buktiPaymentUrl ? '✅ Terlampir / Berhasil Diupload' : '❌ Belum Upload'}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
       {/* Dynamic Form Data */}
       <div className="mb-8 border border-black p-4 rounded-xl">
-        <h3 className="font-bold text-sm mb-4 uppercase border-b border-black pb-2">Data Peserta</h3>
-        <table className="w-full text-sm">
-          <tbody>
-            {formFields.map(field => (
-              <tr key={field.id} className="border-b border-gray-100 last:border-0">
-                <td className="w-1/2 py-2 text-gray-700">{field.label}</td>
-                <td className="w-1/2 py-2 font-bold">: {formData[field.id] || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <h3 className="font-bold text-sm mb-4 uppercase border-b border-black pb-2">
+          {tipePendaftaran === 'kolektif' ? 'Data Kontingen / Kolektif' : 'Data Peserta'}
+        </h3>
+        
+        {tipePendaftaran === 'kolektif' && kolektifPeserta && kolektifPeserta.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[10px] border-collapse">
+              <thead>
+                <tr className="border-b-2 border-black">
+                  <th className="py-2 px-1 text-left w-8">No</th>
+                  {formFields.slice(0, 5).map(f => (
+                    <th key={f.id} className="py-2 px-1 text-left">{f.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {kolektifPeserta.map((p, idx) => (
+                  <tr key={idx} className="border-b border-gray-300 last:border-0">
+                    <td className="py-2 px-1 font-bold">{idx + 1}</td>
+                    {formFields.slice(0, 5).map(f => (
+                      <td key={f.id} className="py-2 px-1">{p[f.id] || '-'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {formFields.length > 5 && (
+              <p className="text-[9px] mt-2 italic">* Beberapa kolom disembunyikan untuk kerapihan cetak. Data lengkap tersimpan di sistem.</p>
+            )}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <tbody>
+              {formFields.map(field => (
+                <tr key={field.id} className="border-b border-gray-100 last:border-0">
+                  <td className="w-1/2 py-2 text-gray-700">{field.label}</td>
+                  <td className="w-1/2 py-2 font-bold">: {formData[field.id] || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* QR Codes Section */}
@@ -82,7 +123,7 @@ export default function BuktiPendaftaranPdfTemplate({
           {isQrValidasi && (
             <div className="flex flex-col items-center text-center">
               <div className="p-2 border-2 border-black rounded-lg inline-block bg-white">
-                <QRCode value={`${origin}/#/validasi-pendaftaran/${pendaftaranId}`} size={120} level="M" />
+                <QRCode value={`${origin}/#/validasi-pendaftaran/${tipePendaftaran === 'kolektif' && kolektifIds?.length ? kolektifIds[0] : pendaftaranId}`} size={120} level="M" />
               </div>
               <p className="text-xs font-bold mt-2 uppercase">Scan Validasi</p>
               <p className="text-[9px] w-32 mt-1">Gunakan kamera HP untuk memvalidasi dokumen ini.</p>
@@ -92,7 +133,7 @@ export default function BuktiPendaftaranPdfTemplate({
           {isQrCheckin && (
             <div className="flex flex-col items-center text-center">
               <div className="p-2 border-2 border-black rounded-lg inline-block bg-white">
-                <QRCode value={pendaftaranId} size={120} level="Q" />
+                <QRCode value={tipePendaftaran === 'kolektif' && kolektifIds?.length ? kolektifIds[0] : pendaftaranId} size={120} level="Q" />
               </div>
               <p className="text-xs font-bold mt-2 uppercase">Scan Check-in</p>
               <p className="text-[9px] w-32 mt-1">Scan kode ini pada meja registrasi ulang.</p>

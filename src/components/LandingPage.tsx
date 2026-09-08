@@ -6,6 +6,7 @@ import {
   Heart, Share2, X, Copy, Check
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
+import * as XLSX from 'xlsx';
 import BuktiPendaftaranPdfTemplate from './BuktiPendaftaranPdfTemplate';
 import { motion, AnimatePresence, useScroll, useVelocity, useTransform, useSpring, useMotionValue, useAnimationFrame } from 'motion/react';
 import InteractiveMap from './InteractiveMap';
@@ -168,6 +169,17 @@ export default function LandingPage() {
   const [registerSuccess, setRegisterSuccess] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
 
+  // Kolektif bulk states
+  const [kolektifMode, setKolektifMode] = useState<'manual' | 'excel'>('manual');
+  const [kolektifPeserta, setKolektifPeserta] = useState<Record<string, any>[]>([{}]);
+  const [kolektifKecamatanId, setKolektifKecamatanId] = useState('');
+  const [excelImportData, setExcelImportData] = useState<Record<string, any>[]>([]);
+  const [excelImportErrors, setExcelImportErrors] = useState<string[]>([]);
+
+  // Camp fee payment proof state
+  const [buktiPaymentUrl, setBuktiPaymentUrl] = useState('');
+  const [buktiPaymentUploading, setBuktiPaymentUploading] = useState(false);
+
   // Load Data
   const loadData = async () => {
     try {
@@ -252,6 +264,11 @@ export default function LandingPage() {
     setSelectedAgenda(agenda);
     setRegisterSuccess(false);
     setRegistrationFormData({});
+    setKolektifPeserta([{}]);
+    setKolektifKecamatanId('');
+    setExcelImportData([]);
+    setExcelImportErrors([]);
+    setBuktiPaymentUrl('');
     
     try {
       const res = await fetch(`/api/agenda/${agenda.id}/config`);
@@ -269,12 +286,149 @@ export default function LandingPage() {
     setRegistrationFormData(prev => ({ ...prev, [fieldId]: value }));
   };
 
+  // ─── Kolektif manual helpers ───
+  const addKolektifRow = () => setKolektifPeserta(prev => [...prev, {}]);
+  const removeKolektifRow = (idx: number) => setKolektifPeserta(prev => prev.filter((_, i) => i !== idx));
+  const updateKolektifRow = (rowIdx: number, fieldId: string, value: any) => {
+    setKolektifPeserta(prev => {
+      const next = [...prev];
+      next[rowIdx] = { ...next[rowIdx], [fieldId]: value };
+      return next;
+    });
+  };
+
+  // ─── Download Excel Template for Kolektif ───
+  const downloadExcelTemplate = () => {
+    if (!agendaConfig?.form_schema) return;
+    const headers = agendaConfig.form_schema.map(f => f.label);
+    const ws = XLSX.utils.aoa_to_sheet([headers, []]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    XLSX.writeFile(wb, `Template_Pendaftaran_${selectedAgenda?.nama_kegiatan || 'Kegiatan'}.xlsx`);
+  };
+
+  // ─── Parse Excel Import ───
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !agendaConfig?.form_schema) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const data = ev.target?.result;
+      const wb = XLSX.read(data, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      if (rows.length < 2) {
+        setExcelImportErrors(['File Excel kosong atau tidak ada baris data.']);
+        return;
+      }
+
+      const headers: string[] = rows[0].map((h: any) => String(h).trim());
+      const schemaFields = agendaConfig.form_schema;
+
+      const errors: string[] = [];
+      const parsed: Record<string, any>[] = [];
+
+      rows.slice(1).forEach((row, rowIdx) => {
+        if (row.every((c: any) => c === '' || c === null || c === undefined)) return; // skip empty rows
+        const peserta: Record<string, any> = {};
+        let rowValid = true;
+
+        schemaFields.forEach(field => {
+          const colIdx = headers.indexOf(field.label);
+          const val = colIdx >= 0 ? String(row[colIdx] || '').trim() : '';
+          if (field.required && !val) {
+            errors.push(`Baris ${rowIdx + 2}: Kolom "${field.label}" wajib diisi.`);
+            rowValid = false;
+          }
+          peserta[field.id] = val;
+        });
+
+        if (rowValid) parsed.push(peserta);
+      });
+
+      setExcelImportErrors(errors);
+      setExcelImportData(parsed);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // ─── Upload bukti pembayaran ───
+  const handleBuktiPaymentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBuktiPaymentUploading(true);
+    try {
+      const { compressAndUploadFile } = await import('../utils/imageUpload');
+      const url = await compressAndUploadFile(file, 'gambar');
+      setBuktiPaymentUrl(url);
+    } catch (err) {
+      alert('Gagal upload bukti pembayaran. Coba lagi ya.');
+      console.error(err);
+    } finally {
+      setBuktiPaymentUploading(false);
+    }
+  };
+
+  // ─── Submit Kolektif Batch ───
+  const submitKolektifBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAgenda) return;
+    
+    const pesertaToSend = kolektifMode === 'excel' ? excelImportData : kolektifPeserta.filter(p => Object.values(p).some(v => v));
+    if (pesertaToSend.length === 0) {
+      alert('Belum ada data peserta yang siap dikirim.');
+      return;
+    }
+
+    if (selectedAgenda.is_camp_fee_required && !buktiPaymentUrl) {
+      alert('Harap upload bukti pembayaran camp fee terlebih dahulu.');
+      return;
+    }
+
+    setRegisterLoading(true);
+    try {
+      const res = await fetch(`/api/agenda/${selectedAgenda.id}/register-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          peserta_list: pesertaToSend.map(p => ({ data_peserta: p })),
+          kecamatan_id: kolektifKecamatanId || null,
+          bukti_bayar_url: buktiPaymentUrl || null
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setRegisterSuccess(true);
+        // data.ids is array of inserted pendaftaran_peserta IDs
+        setKolektifBatchIds(data.ids);
+        setPendaftaranId(`kolektif-${data.ids.length}`);
+      } else {
+        alert('Gagal mengirim pendaftaran kolektif. Coba lagi.');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
   const [pendaftaranId, setPendaftaranId] = useState<string>('');
+  const [kolektifBatchIds, setKolektifBatchIds] = useState<string[]>([]);
+
 
   const submitRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAgenda) return;
     setRegisterLoading(true);
+
+    if (selectedAgenda.is_camp_fee_required && !buktiPaymentUrl) {
+      alert('Harap upload bukti pembayaran camp fee terlebih dahulu.');
+      setRegisterLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch(`/api/agenda/${selectedAgenda.id}/register`, {
@@ -282,8 +436,11 @@ export default function LandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipe: registrationType,
-          kecamatan_id: null, // Public mandiri is null, or can be bound if desired
-          data_peserta: registrationFormData
+          kecamatan_id: null,
+          data_peserta: {
+            ...registrationFormData,
+            ...(buktiPaymentUrl ? { _bukti_bayar: buktiPaymentUrl } : {})
+          }
         })
       });
 
@@ -1646,116 +1803,244 @@ export default function LandingPage() {
 
                   {/* Hidden PDF Template rendered to be captured by html2pdf */}
                   <div className="hidden">
-                    <BuktiPendaftaranPdfTemplate 
-                      pendaftaranId={pendaftaranId}
-                      agendaName={selectedAgenda.nama_kegiatan}
-                      agendaLogo={selectedAgenda.logo_url}
-                      waktuDaftar={new Date().toLocaleString('id-ID')}
-                      tipePendaftaran={registrationType}
-                      asalKwarran={registrationFormData['f2'] || ''} // Fallback for asal kwarran if configured
-                      formData={registrationFormData}
-                      formFields={agendaConfig?.form_schema || []}
-                      isQrValidasi={agendaConfig?.is_qr_validasi ?? true}
-                      isQrCheckin={agendaConfig?.is_qr_checkin ?? false}
-                    />
+                      <BuktiPendaftaranPdfTemplate 
+                        pendaftaranId={pendaftaranId}
+                        agendaName={selectedAgenda.nama_kegiatan}
+                        agendaLogo={selectedAgenda.logo_url}
+                        waktuDaftar={new Date().toLocaleString('id-ID')}
+                        tipePendaftaran={registrationType}
+                        asalKwarran={
+                          registrationType === 'kolektif' 
+                            ? kecamatanList.find(k => k.id === kolektifKecamatanId)?.nama_kecamatan || ''
+                            : registrationFormData['f2'] || ''
+                        }
+                        formData={registrationFormData}
+                        formFields={agendaConfig?.form_schema || []}
+                        isQrValidasi={agendaConfig?.is_qr_validasi ?? true}
+                        isQrCheckin={agendaConfig?.is_qr_checkin ?? false}
+                        kolektifPeserta={kolektifMode === 'excel' ? excelImportData : kolektifPeserta}
+                        kolektifIds={kolektifBatchIds}
+                        isCampFeeRequired={selectedAgenda.is_camp_fee_required}
+                        buktiPaymentUrl={buktiPaymentUrl}
+                      />
                   </div>
                 </div>
               ) : (
-                <form onSubmit={submitRegistration} className="space-y-5">
-                  {/* Tipe pendaftaran picker if configured as both */}
-                  {agendaConfig?.tipe_pendaftaran === 'keduanya' && (
-                    <div>
-                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 font-mono">
-                        Tipe Pendaftaran
-                      </label>
-                      <div className="grid grid-cols-2 gap-3 font-mono text-xs text-center">
-                        <button
-                          type="button"
-                          onClick={() => setRegistrationType('mandiri')}
-                          className={`p-2.5 rounded-xl border font-bold ${
-                            registrationType === 'mandiri' 
-                              ? 'bg-brand-orange text-brand-brown-dark border-brand-orange font-extrabold shadow'
-                              : 'bg-gray-50 border-gray-200 text-gray-500'
-                          }`}
-                        >
-                          Mandiri (Perorangan)
+                /* ─── Determine if kolektif ─── */
+                (registrationType === 'kolektif' && agendaConfig)
+                  ? (
+                    /* ══════════════════════════════════════════════
+                       KOLEKTIF BULK REGISTRATION FORM
+                    ══════════════════════════════════════════════ */
+                    <form onSubmit={submitKolektifBatch} className="space-y-5">
+                      {/* Tipe picker */}
+                      {agendaConfig.tipe_pendaftaran === 'keduanya' && (
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 font-mono">Tipe Pendaftaran</label>
+                          <div className="grid grid-cols-2 gap-3 font-mono text-xs text-center">
+                            <button type="button" onClick={() => setRegistrationType('mandiri')}
+                              className="p-2.5 rounded-xl border font-bold bg-gray-50 border-gray-200 text-gray-500">Mandiri (Perorangan)</button>
+                            <button type="button" onClick={() => setRegistrationType('kolektif')}
+                              className="p-2.5 rounded-xl border font-bold bg-brand-orange text-brand-brown-dark border-brand-orange font-extrabold shadow">Kolektif (Ranting/Gudep)</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Asal Kwarran Ranting */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Asal Kwartir Ranting <span className="text-brand-red">*</span></label>
+                        <select required value={kolektifKecamatanId} onChange={e => setKolektifKecamatanId(e.target.value)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-medium">
+                          <option value="">-- Pilih Kecamatan / Ranting --</option>
+                          {kecamatanList.map(k => <option key={k.id} value={k.id}>{k.nama_kecamatan}</option>)}
+                        </select>
+                      </div>
+
+                      {/* Mode: manual / excel */}
+                      <div className="bg-gray-50 rounded-xl p-1 flex gap-1">
+                        <button type="button" onClick={() => setKolektifMode('manual')}
+                          className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all ${kolektifMode === 'manual' ? 'bg-white shadow text-brand-brown-dark' : 'text-gray-400'}`}>
+                          ✍️ Input Manual
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setRegistrationType('kolektif')}
-                          className={`p-2.5 rounded-xl border font-bold ${
-                            registrationType === 'kolektif' 
-                              ? 'bg-brand-orange text-brand-brown-dark border-brand-orange font-extrabold shadow'
-                              : 'bg-gray-50 border-gray-200 text-gray-500'
-                          }`}
-                        >
-                          Kolektif (Ranting/Gudep)
+                        <button type="button" onClick={() => setKolektifMode('excel')}
+                          className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all ${kolektifMode === 'excel' ? 'bg-white shadow text-brand-brown-dark' : 'text-gray-400'}`}>
+                          📊 Import Excel
                         </button>
                       </div>
-                    </div>
-                  )}
 
-                  {/* Schema fields */}
-                  <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">
-                    {agendaConfig?.form_schema ? (
-                      agendaConfig.form_schema.map((f) => (
-                        <div key={f.id}>
-                          <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
-                            {f.label} {f.required && <span className="text-brand-red">*</span>}
-                          </label>
-
-                          {f.type === 'select' ? (
-                            <select
-                              required={f.required}
-                              value={registrationFormData[f.id] || ''}
-                              onChange={(e) => handleInputChange(f.id, e.target.value)}
-                              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-medium"
-                            >
-                              <option value="">-- Pilih salah satu --</option>
-                              {(f.label.toLowerCase().includes('kwartir ranting') 
-                                ? kecamatanList.map(k => k.nama_kecamatan).sort() 
-                                : f.options
-                              )?.map((opt) => (
-                                <option key={opt} value={opt}>{opt}</option>
+                      {kolektifMode === 'manual' ? (
+                        /* ─── Input Manual ─── */
+                        <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+                          {kolektifPeserta.map((peserta, rowIdx) => (
+                            <div key={rowIdx} className="bg-white border border-gray-200 rounded-xl p-3 space-y-2 relative">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-[10px] font-bold text-brand-orange font-mono">Peserta #{rowIdx + 1}</span>
+                                {kolektifPeserta.length > 1 && (
+                                  <button type="button" onClick={() => removeKolektifRow(rowIdx)}
+                                    className="text-gray-400 hover:text-red-500 text-[10px] font-bold cursor-pointer">✕ Hapus</button>
+                                )}
+                              </div>
+                              {agendaConfig.form_schema.map(f => (
+                                <div key={f.id}>
+                                  <label className="block text-[10px] text-gray-500 font-bold uppercase mb-0.5">{f.label}{f.required && <span className="text-red-400"> *</span>}</label>
+                                  {f.type === 'select' ? (
+                                    <select required={f.required} value={peserta[f.id] || ''} onChange={e => updateKolektifRow(rowIdx, f.id, e.target.value)}
+                                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
+                                      <option value="">-- Pilih --</option>
+                                      {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
+                                    </select>
+                                  ) : (
+                                    <input type={f.type === 'number' ? 'number' : 'text'} required={f.required}
+                                      value={peserta[f.id] || ''} onChange={e => updateKolektifRow(rowIdx, f.id, e.target.value)}
+                                      placeholder={f.label} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs" />
+                                  )}
+                                </div>
                               ))}
-                            </select>
-                          ) : f.type === 'textarea' ? (
-                            <textarea
-                              required={f.required}
-                              value={registrationFormData[f.id] || ''}
-                              onChange={(e) => handleInputChange(f.id, e.target.value)}
-                              placeholder={`Masukkan ${f.label.toLowerCase()}`}
-                              rows={3}
-                              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800"
-                            />
-                          ) : (
-                            <input
-                              type={f.type === 'number' ? 'number' : 'text'}
-                              required={f.required}
-                              value={registrationFormData[f.id] || ''}
-                              onChange={(e) => handleInputChange(f.id, e.target.value)}
-                              placeholder={`Masukkan ${f.label.toLowerCase()}`}
-                              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800"
-                            />
+                            </div>
+                          ))}
+                          <button type="button" onClick={addKolektifRow}
+                            className="w-full border-2 border-dashed border-brand-orange/40 text-brand-orange text-xs font-bold py-2 rounded-xl hover:bg-brand-orange/5 transition-colors cursor-pointer">
+                            + Tambah Peserta
+                          </button>
+                        </div>
+                      ) : (
+                        /* ─── Import Excel ─── */
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <button type="button" onClick={downloadExcelTemplate}
+                              className="flex-1 bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal text-xs font-bold py-2.5 rounded-xl border border-brand-teal/20 flex items-center justify-center gap-1.5 cursor-pointer">
+                              <Download className="w-3.5 h-3.5" /> Download Template
+                            </button>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Upload File Excel Yang Sudah Diisi</label>
+                            <input type="file" accept=".xlsx,.xls" onChange={handleExcelImport}
+                              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-[10px] text-gray-500" />
+                          </div>
+                          {excelImportErrors.length > 0 && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-1">
+                              <p className="text-[10px] font-bold text-red-600 uppercase">Error Validasi ({excelImportErrors.length} baris gagal):</p>
+                              {excelImportErrors.slice(0, 5).map((err, i) => <p key={i} className="text-[10px] text-red-500 font-mono">{err}</p>)}
+                              {excelImportErrors.length > 5 && <p className="text-[10px] text-red-400">...dan {excelImportErrors.length - 5} error lainnya</p>}
+                            </div>
+                          )}
+                          {excelImportData.length > 0 && (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                              <p className="text-[10px] font-bold text-green-700">✅ {excelImportData.length} peserta siap didaftarkan</p>
+                            </div>
                           )}
                         </div>
-                      ))
-                    ) : (
-                      <div className="bg-brand-yellow/10 border border-brand-yellow/20 rounded-xl p-3 flex gap-2 items-start text-xs text-brand-yellow">
-                        <AlertCircle className="w-4 h-4 shrink-0" />
-                        <span>Formulir sedang dipersiapkan oleh administrator. Silakan hubungi sekretariat.</span>
-                      </div>
-                    )}
-                  </div>
+                      )}
 
-                  <button
-                    type="submit"
-                    disabled={registerLoading || !agendaConfig}
-                    className="w-full bg-gradient-to-r from-brand-orange to-brand-green text-white font-extrabold text-sm py-3.5 rounded-xl shadow-md uppercase tracking-wider hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer"
-                  >
-                    {registerLoading ? 'Mengirim Data...' : 'Kirim Pendaftaran Resmi'}
-                  </button>
-                </form>
+                      {/* Camp Fee Upload (if applicable) */}
+                      {selectedAgenda?.is_camp_fee_required && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                          <p className="text-[10px] font-bold text-amber-700 uppercase">
+                            Camp Fee: Rp {(selectedAgenda.camp_fee || 0).toLocaleString('id-ID')}
+                          </p>
+                          <p className="text-[10px] text-amber-600">Upload satu bukti transfer untuk seluruh kontingen.</p>
+                          <input type="file" accept="image/*" onChange={handleBuktiPaymentUpload}
+                            className="w-full text-[10px] text-gray-500 bg-white border border-amber-200 rounded-lg px-3 py-2" />
+                          {buktiPaymentUploading && <p className="text-[10px] text-amber-500 animate-pulse font-mono">Uploading...</p>}
+                          {buktiPaymentUrl && !buktiPaymentUploading && (
+                            <p className="text-[10px] text-green-600 font-bold">✅ Bukti pembayaran tersimpan</p>
+                          )}
+                        </div>
+                      )}
+
+                      <button type="submit" disabled={registerLoading || !agendaConfig}
+                        className="w-full bg-gradient-to-r from-brand-orange to-brand-green text-white font-extrabold text-sm py-3.5 rounded-xl shadow-md uppercase tracking-wider hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer">
+                        {registerLoading ? 'Mengirim Data...' : `Daftarkan ${kolektifMode === 'excel' ? excelImportData.length : kolektifPeserta.length} Peserta`}
+                      </button>
+                    </form>
+                  )
+                  : (
+                    /* ══════════════════════════════════════════════
+                       MANDIRI SINGLE REGISTRATION FORM (original)
+                    ══════════════════════════════════════════════ */
+                    <form onSubmit={submitRegistration} className="space-y-5">
+                      {/* Tipe pendaftaran picker if configured as both */}
+                      {agendaConfig?.tipe_pendaftaran === 'keduanya' && (
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 font-mono">Tipe Pendaftaran</label>
+                          <div className="grid grid-cols-2 gap-3 font-mono text-xs text-center">
+                            <button type="button" onClick={() => setRegistrationType('mandiri')}
+                              className="p-2.5 rounded-xl border font-bold bg-brand-orange text-brand-brown-dark border-brand-orange font-extrabold shadow">
+                              Mandiri (Perorangan)
+                            </button>
+                            <button type="button" onClick={() => setRegistrationType('kolektif')}
+                              className="p-2.5 rounded-xl border font-bold bg-gray-50 border-gray-200 text-gray-500">
+                              Kolektif (Ranting/Gudep)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Schema fields */}
+                      <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">
+                        {agendaConfig?.form_schema ? (
+                          agendaConfig.form_schema.map((f) => (
+                            <div key={f.id}>
+                              <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
+                                {f.label} {f.required && <span className="text-brand-red">*</span>}
+                              </label>
+
+                              {f.type === 'select' ? (
+                                <select required={f.required} value={registrationFormData[f.id] || ''}
+                                  onChange={(e) => handleInputChange(f.id, e.target.value)}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-medium">
+                                  <option value="">-- Pilih salah satu --</option>
+                                  {(f.label.toLowerCase().includes('kwartir ranting') 
+                                    ? kecamatanList.map(k => k.nama_kecamatan).sort() 
+                                    : f.options
+                                  )?.map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                  ))}
+                                </select>
+                              ) : f.type === 'textarea' ? (
+                                <textarea required={f.required} value={registrationFormData[f.id] || ''}
+                                  onChange={(e) => handleInputChange(f.id, e.target.value)}
+                                  placeholder={`Masukkan ${f.label.toLowerCase()}`} rows={3}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800" />
+                              ) : (
+                                <input type={f.type === 'number' ? 'number' : 'text'} required={f.required}
+                                  value={registrationFormData[f.id] || ''}
+                                  onChange={(e) => handleInputChange(f.id, e.target.value)}
+                                  placeholder={`Masukkan ${f.label.toLowerCase()}`}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800" />
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="bg-brand-yellow/10 border border-brand-yellow/20 rounded-xl p-3 flex gap-2 items-start text-xs text-brand-yellow">
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>Formulir sedang dipersiapkan oleh administrator. Silakan hubungi sekretariat.</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Camp Fee Upload for Mandiri */}
+                      {selectedAgenda?.is_camp_fee_required && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                          <p className="text-[10px] font-bold text-amber-700 uppercase">
+                            Camp Fee: Rp {(selectedAgenda.camp_fee || 0).toLocaleString('id-ID')} <span className="text-red-500">*</span>
+                          </p>
+                          <p className="text-[10px] text-amber-600">Upload bukti transfer sebelum submit.</p>
+                          <input type="file" accept="image/*" onChange={handleBuktiPaymentUpload}
+                            className="w-full text-[10px] text-gray-500 bg-white border border-amber-200 rounded-lg px-3 py-2" />
+                          {buktiPaymentUploading && <p className="text-[10px] text-amber-500 animate-pulse font-mono">Uploading...</p>}
+                          {buktiPaymentUrl && !buktiPaymentUploading && (
+                            <p className="text-[10px] text-green-600 font-bold">✅ Bukti pembayaran tersimpan</p>
+                          )}
+                        </div>
+                      )}
+
+                      <button type="submit" disabled={registerLoading || !agendaConfig}
+                        className="w-full bg-gradient-to-r from-brand-orange to-brand-green text-white font-extrabold text-sm py-3.5 rounded-xl shadow-md uppercase tracking-wider hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer">
+                        {registerLoading ? 'Mengirim Data...' : 'Kirim Pendaftaran Resmi'}
+                      </button>
+                    </form>
+                  )
               )}
             </motion.div>
           </div>
