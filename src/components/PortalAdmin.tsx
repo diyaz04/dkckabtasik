@@ -13,6 +13,7 @@ import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/i
 import * as XLSX from 'xlsx';
 import CheckinScanner from './CheckinScanner';
 import { ScanLine, CheckCircle } from 'lucide-react';
+import GreetingBanner from './GreetingBanner';
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
