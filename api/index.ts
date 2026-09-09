@@ -697,6 +697,34 @@ app.post('/api/pendaftaran/checkin/:id', async (req: Request, res: Response) => 
   }
 });
 
+app.post('/api/pendaftaran/lunas/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Ambil data sekarang
+    const { data: current } = await supabaseAdmin
+      .from('pendaftaran_peserta')
+      .select('data_peserta')
+      .eq('id', id)
+      .maybeSingle();
+      
+    if (!current) {
+      return res.status(404).json({ error: 'Peserta tidak ditemukan' });
+    }
+    
+    const newData = { ...(current.data_peserta || {}), _is_lunas: true, _waktu_lunas: new Date().toISOString() };
+    
+    await supabaseAdmin
+      .from('pendaftaran_peserta')
+      .update({ data_peserta: newData })
+      .eq('id', id);
+      
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Informasi ──
 app.get('/api/informasi', async (_req: Request, res: Response) => {
   try {

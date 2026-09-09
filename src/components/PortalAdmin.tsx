@@ -101,7 +101,8 @@ export default function PortalAdmin() {
   const [isQrCheckin, setIsQrCheckin] = useState(false);
   const [registrants, setRegistrants] = useState<any[]>([]);
   const [showScanner, setShowScanner] = useState(false);
-
+  const [agendaDashboardTab, setAgendaDashboardTab] = useState<'semua' | 'menunggu' | 'lunas' | 'checkin'>('semua');
+  const [viewRegistrant, setViewRegistrant] = useState<any | null>(null);
   // User management states
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -724,6 +725,29 @@ export default function PortalAdmin() {
     } catch (e) {
       console.error(e);
       alert('Terjadi kesalahan saat check-in.');
+    }
+  };
+
+  const handleMarkLunas = async (id: string) => {
+    if (!window.confirm('Yakin ingin menandai peserta ini sudah lunas?')) return;
+    try {
+      const res = await fetch(`/api/pendaftaran/lunas/${id}`, { method: 'POST' });
+      if (res.ok) {
+        alert('Berhasil ditandai Lunas!');
+        if (selectedDashboardAgenda) {
+          handleOpenDashboard(selectedDashboardAgenda);
+        }
+        if (viewRegistrant && viewRegistrant.id === id) {
+          setViewRegistrant((prev: any) => ({
+            ...prev,
+            data_peserta: { ...prev.data_peserta, _is_lunas: true, _waktu_lunas: new Date().toISOString() }
+          }));
+        }
+      } else {
+        alert('Gagal menandai lunas.');
+      }
+    } catch (e) {
+      console.error(e);
     }
   };
 
@@ -1699,8 +1723,69 @@ export default function PortalAdmin() {
                     ? Math.round((uniqueKwarran.size / kecamatanList.length) * 100) 
                     : 0;
 
+                  const filteredRegistrants = registrants.filter(reg => {
+                    if (agendaDashboardTab === 'semua') return true;
+                    if (agendaDashboardTab === 'menunggu') return reg.data_peserta?._bukti_bayar && !reg.data_peserta?._is_lunas;
+                    if (agendaDashboardTab === 'lunas') return reg.data_peserta?._is_lunas;
+                    if (agendaDashboardTab === 'checkin') return reg.data_peserta?._is_hadir;
+                    return true;
+                  });
+
                   return (
                     <div className="space-y-6">
+                      {/* MODAL VIEW DETAIL PESERTA */}
+                      {viewRegistrant && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                          <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl relative my-8">
+                            <button onClick={() => setViewRegistrant(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                              <X className="w-5 h-5" />
+                            </button>
+                            <h3 className="font-extrabold text-lg text-brand-brown-dark mb-4 border-b pb-2">Detail Pendaftar</h3>
+                            
+                            <div className="space-y-2 text-xs font-mono mb-4 max-h-[60vh] overflow-y-auto pr-2">
+                              {formFields.map(field => (
+                                <div key={field.id} className="grid grid-cols-3 border-b border-gray-100 py-1.5">
+                                  <span className="text-gray-500 font-bold col-span-1">{field.label}</span>
+                                  <span className="text-gray-800 col-span-2">{viewRegistrant.data_peserta[field.id] || '-'}</span>
+                                </div>
+                              ))}
+                              {viewRegistrant.kecamatan_id && (
+                                <div className="grid grid-cols-3 border-b border-brand-green/20 bg-brand-green/5 py-1.5 px-2 rounded mt-2">
+                                  <span className="text-brand-green font-bold col-span-1">Kwarran</span>
+                                  <span className="text-brand-green font-bold col-span-2">{kecamatanList.find((k: any) => k.id === viewRegistrant.kecamatan_id)?.nama_kecamatan || viewRegistrant.kecamatan_id}</span>
+                                </div>
+                              )}
+                              {selectedDashboardAgenda.is_camp_fee_required && (
+                                <>
+                                  <div className="grid grid-cols-3 border-b border-gray-100 py-1.5 mt-2">
+                                    <span className="text-gray-500 font-bold col-span-1">Status Bayar</span>
+                                    <span className="col-span-2">
+                                      {viewRegistrant.data_peserta?._is_lunas 
+                                        ? <span className="text-green-600 font-bold">LUNAS</span> 
+                                        : <span className="text-red-500 font-bold">BELUM LUNAS</span>}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-3 border-b border-gray-100 py-1.5">
+                                    <span className="text-gray-500 font-bold col-span-1">Bukti Bayar</span>
+                                    <span className="col-span-2">
+                                      {viewRegistrant.data_peserta?._bukti_bayar ? (
+                                        <a href={viewRegistrant.data_peserta._bukti_bayar} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Lihat Bukti</a>
+                                      ) : '-'}
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            
+                            {selectedDashboardAgenda.is_camp_fee_required && !viewRegistrant.data_peserta?._is_lunas && (
+                              <button onClick={() => handleMarkLunas(viewRegistrant.id)} className="w-full bg-brand-orange text-white font-bold text-xs py-3 rounded-xl hover:bg-orange-600">
+                                Tandai Lunas
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
                           {selectedDashboardAgenda.logo_url && (
@@ -1755,45 +1840,55 @@ export default function PortalAdmin() {
                       </div>
                       
                       <div className="pt-6 border-t border-gray-100">
-                        <h5 className="font-extrabold text-base text-brand-brown-dark tracking-tight mb-4">
-                          Data Pendaftar Terkonfirmasi
-                        </h5>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                          <h5 className="font-extrabold text-base text-brand-brown-dark tracking-tight">
+                            Data Pendaftar Terkonfirmasi
+                          </h5>
+                          
+                          {/* Tabs */}
+                          <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+                            <button onClick={() => setAgendaDashboardTab('semua')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'semua' ? 'bg-brand-brown-dark text-white' : 'bg-gray-100 text-gray-500'}`}>Semua</button>
+                            {selectedDashboardAgenda.is_camp_fee_required && (
+                              <>
+                                <button onClick={() => setAgendaDashboardTab('menunggu')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'menunggu' ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-500'}`}>Menunggu Verifikasi</button>
+                                <button onClick={() => setAgendaDashboardTab('lunas')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'lunas' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>Sudah Bayar</button>
+                              </>
+                            )}
+                            <button onClick={() => setAgendaDashboardTab('checkin')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'checkin' ? 'bg-brand-green text-white' : 'bg-gray-100 text-gray-500'}`}>Sudah Check-in</button>
+                          </div>
+                        </div>
                         
-                        {registrants.length > 0 ? (
-                          <div className="space-y-4 font-mono text-xs text-gray-700">
-                            {registrants.map((reg, idx) => (
-                              <div key={reg.id} className="p-4 bg-gray-50 border rounded-xl border-gray-150 shadow-sm hover:border-brand-green/30 transition-colors">
-                                <div className="flex justify-between items-center font-bold text-sm mb-3 text-brand-brown-dark border-b pb-2">
-                                  <div className="flex items-center gap-2">
-                                    <span>Pendaftar #{idx+1} ({reg.tipe})</span>
-                                    {reg.data_peserta?._is_hadir && (
-                                      <span className="bg-brand-green/10 text-brand-green px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider border border-brand-green/20 flex items-center gap-1">
-                                        <CheckCircle className="w-3 h-3" /> Hadir
-                                      </span>
-                                    )}
+                        {filteredRegistrants.length > 0 ? (
+                          <div className="space-y-3 font-mono text-xs text-gray-700">
+                            {filteredRegistrants.map((reg, idx) => (
+                              <div key={reg.id} className="p-4 bg-white border rounded-xl border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:border-brand-green/30 transition-colors">
+                                <div className="flex-1 w-full">
+                                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                                    <span className="font-bold text-sm text-brand-brown-dark uppercase">{reg.data_peserta[formFields[0]?.id] || 'Peserta'}</span>
+                                    <span className="text-[9px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 uppercase">{reg.tipe}</span>
+                                    {reg.data_peserta?._is_hadir && <span className="bg-brand-green/10 text-brand-green px-2 py-0.5 rounded text-[9px] uppercase font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Check-in</span>}
+                                    {selectedDashboardAgenda.is_camp_fee_required && reg.data_peserta?._is_lunas && <span className="bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded text-[9px] uppercase font-bold">Lunas</span>}
                                   </div>
-                                  <span className="text-gray-400 font-normal text-xs">{new Date(reg.created_at).toLocaleString('id-ID')}</span>
+                                  <div className="text-[10px] text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                                    {reg.kecamatan_id && <span>📍 {kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id}</span>}
+                                    <span>🕒 {new Date(reg.created_at).toLocaleString('id-ID')}</span>
+                                  </div>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                                  {formFields.map((field) => (
-                                    <div key={field.id} className="flex justify-between border-b border-gray-100 py-1">
-                                      <span className="text-gray-400 text-[10px]">{field.label}:</span>
-                                      <strong className="text-gray-800">{reg.data_peserta[field.id] || '-'}</strong>
-                                    </div>
-                                  ))}
-                                  {/* Show kwarran origin if available */}
-                                  {reg.kecamatan_id && (
-                                    <div className="flex justify-between border-b border-brand-green/20 bg-brand-green/5 px-2 py-1.5 mt-2 sm:col-span-2 rounded">
-                                      <span className="text-brand-green font-bold text-[10px]">Asal Kwartir Ranting:</span>
-                                      <strong className="text-brand-green font-bold">{kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id}</strong>
-                                    </div>
+                                <div className="flex gap-2 shrink-0">
+                                  <button onClick={() => setViewRegistrant(reg)} className="bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
+                                    <Eye className="w-3 h-3" /> Detail
+                                  </button>
+                                  {selectedDashboardAgenda.is_camp_fee_required && !reg.data_peserta?._is_lunas && (
+                                    <button onClick={() => handleMarkLunas(reg.id)} className="bg-amber-100 hover:bg-amber-200 text-amber-600 border border-amber-200 text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
+                                      <Check className="w-3 h-3" /> Lunas
+                                    </button>
                                   )}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-gray-500 italic p-8 text-center bg-gray-50 rounded-2xl border border-dashed">Belum ada peserta yang mendaftar pada kegiatan ini.</p>
+                          <p className="text-sm text-gray-500 italic p-8 text-center bg-gray-50 rounded-2xl border border-dashed">Belum ada peserta di kategori ini.</p>
                         )}
                       </div>
                     </div>
