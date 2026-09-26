@@ -8,7 +8,7 @@ import {
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
   Pangkalan, DataPotensial, DkrProfile, LaporanKegiatan
 } from '../types';
-import { compressAndUploadFile } from '../utils/imageUpload';
+import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/imageUpload';
 
 import LaporanFormGenerator from './LaporanFormGenerator';
 import LaporanPdfTemplate from './LaporanPdfTemplate';
@@ -17,7 +17,7 @@ import GreetingBanner from './GreetingBanner';
 
 export default function PortalDkr() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan' | 'tagihan_cabang'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -68,6 +68,13 @@ export default function PortalDkr() {
   const [newPersonJabatan, setNewPersonJabatan] = useState('');
   const [newPersonGolongan, setNewPersonGolongan] = useState<'penegak' | 'pandega' | 'pembina' | 'lainnya'>('penegak');
   const [newPersonFoto, setNewPersonFoto] = useState('');
+
+  // Tagihan Cabang states
+  const [tagihanCabangList, setTagihanCabangList] = useState<any[]>([]);
+  const [selectedTagihan, setSelectedTagihan] = useState<any>(null);
+  const [tagihanPeserta, setTagihanPeserta] = useState<any[]>([]);
+  const [tagihanReceipt, setTagihanReceipt] = useState('');
+  const [tagihanUploading, setTagihanUploading] = useState(false);
 
   // Password Update
   const [oldPassword, setOldPassword] = useState('');
@@ -151,6 +158,12 @@ export default function PortalDkr() {
         setPenegakP(resData.data_potensial.jumlah_penegak_p);
         setPandegaL(resData.data_potensial.jumlah_pandega_l);
         setPandegaP(resData.data_potensial.jumlah_pandega_p);
+      }
+
+      // Fetch Tagihan Kolektif Kwarran
+      const tagihanRes = await fetch(`/api/tagihan_kolektif?kwarran_id=${kecaObj.id}`);
+      if (tagihanRes.ok) {
+        setTagihanCabangList(await tagihanRes.json());
       }
 
       // Fetch Laporan Kegiatan
@@ -807,6 +820,15 @@ export default function PortalDkr() {
             <Calendar className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Kegiatan Lokal</span>}
           </button>
 
+          <button 
+            onClick={() => { setActiveTab('tagihan_cabang'); setIsMobileMenuOpen(false); }}
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
+              activeTab === 'tagihan_cabang' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
+            }`}
+          >
+            <Lock className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Tagihan Cabang</span>}
+          </button>
+
           {/* Kategori: LAPORAN & AKUN */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
             {isSidebarCollapsed ? '•' : 'Laporan &amp; Akun'}
@@ -1308,6 +1330,164 @@ export default function PortalDkr() {
               </div>
 
             </div>
+          </div>
+        )}
+
+        {/* DKR TAB 5.5: TAGIHAN CABANG */}
+        {activeTab === 'tagihan_cabang' && (
+          <div className="space-y-8">
+            <div className="border-b border-gray-200 pb-4">
+              <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Tagihan Kegiatan Cabang</h1>
+              <p className="text-xs text-gray-500 font-mono mt-1">Verifikasi peserta dan bayar tagihan pendaftaran kolektif dari Cabang (DKC).</p>
+            </div>
+
+            {selectedTagihan ? (
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <h3 className="font-extrabold text-lg text-brand-brown-dark">{selectedTagihan.agenda_nama}</h3>
+                    <p className="text-xs text-gray-500 font-mono">Status: <span className={`font-bold px-2 py-0.5 rounded uppercase ${selectedTagihan.status === 'lunas' ? 'bg-green-100 text-green-700' : selectedTagihan.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{selectedTagihan.status}</span></p>
+                  </div>
+                  <button onClick={() => setSelectedTagihan(null)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-xs">Kembali</button>
+                </div>
+
+                {selectedTagihan.status === 'ditolak' && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p className="font-bold text-red-700 text-xs mb-1">Ditolak oleh Cabang:</p>
+                    <p className="text-red-600 text-xs italic">{selectedTagihan.catatan_admin || 'Tidak ada alasan'}</p>
+                    <p className="text-red-500 text-[10px] mt-2">Silakan perbaiki dan upload ulang bukti pembayaran.</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <h4 className="font-extrabold text-brand-brown-dark mb-4 text-sm border-b pb-2">Daftar Peserta Kwarran</h4>
+                    {tagihanPeserta.length > 0 ? (
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                        {tagihanPeserta.map((p, i) => (
+                          <div key={i} className="text-xs font-mono bg-gray-50 p-2 rounded border flex justify-between">
+                            <span>{p.data_peserta?.nama || p.id}</span>
+                            <span className={p.data_peserta?._is_lunas ? 'text-brand-green font-bold' : 'text-amber-500'}>{p.data_peserta?._is_lunas ? 'Lunas' : 'Belum Lunas'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-400 italic">Belum ada peserta yang mendaftar.</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-extrabold text-brand-brown-dark mb-4 text-sm border-b pb-2">Informasi Pembayaran</h4>
+                    <div className="bg-gray-50 p-4 rounded-xl font-mono text-xs space-y-2 border">
+                      <div className="flex justify-between"><span>Jumlah Peserta:</span> <span className="font-bold">{tagihanPeserta.length} orang</span></div>
+                      <div className="flex justify-between"><span>Camp Fee per orang:</span> <span className="font-bold">Rp {(selectedTagihan.camp_fee || 0).toLocaleString('id-ID')}</span></div>
+                      <div className="border-t pt-2 flex justify-between text-sm">
+                        <span className="font-extrabold text-brand-brown-dark">Total Tagihan:</span>
+                        <span className="font-extrabold text-brand-orange">Rp {(tagihanPeserta.length * (selectedTagihan.camp_fee || 0)).toLocaleString('id-ID')}</span>
+                      </div>
+                    </div>
+
+                    {(selectedTagihan.status === 'belum_bayar' || selectedTagihan.status === 'ditolak') && (
+                      <div className="space-y-3">
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Upload Bukti Transfer</label>
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setTagihanUploading(true);
+                            try {
+                              const url = await compressAndUploadToUploadcare(file);
+                              setTagihanReceipt(url);
+                            } catch(err) { alert('Gagal upload gambar'); }
+                            setTagihanUploading(false);
+                          }}
+                          className="w-full text-xs text-gray-500"
+                        />
+                        {tagihanUploading && <p className="text-[10px] text-brand-orange animate-pulse">Uploading...</p>}
+                        {tagihanReceipt && (
+                          <div className="relative inline-block mt-2">
+                            <img src={tagihanReceipt} alt="Bukti" className="h-32 object-contain border rounded-lg" />
+                          </div>
+                        )}
+                        <button 
+                          disabled={!tagihanReceipt}
+                          onClick={async () => {
+                            if (!tagihanReceipt) return;
+                            try {
+                              const res = await fetch('/api/tagihan_kolektif/bayar', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  tagihan_id: selectedTagihan.id,
+                                  bukti_bayar_url: tagihanReceipt,
+                                  total_tagihan: tagihanPeserta.length * (selectedTagihan.camp_fee || 0)
+                                })
+                              });
+                              if (res.ok) {
+                                alert('Berhasil disubmit! Menunggu verifikasi Cabang.');
+                                setSelectedTagihan(null);
+                                setTagihanReceipt('');
+                                // reload
+                                const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
+                                const tRes = await fetch(`/api/tagihan_kolektif?kwarran_id=${keca.id}`);
+                                setTagihanCabangList(await tRes.json());
+                              }
+                            } catch(e) {}
+                          }}
+                          className={`w-full font-extrabold text-xs py-3 rounded-xl uppercase shadow ${tagihanReceipt ? 'bg-brand-brown-dark hover:bg-brand-brown-dark/95 text-white' : 'bg-gray-200 text-gray-400'}`}
+                        >
+                          Submit Pembayaran
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedTagihan.status === 'menunggu_verifikasi' && (
+                      <div className="bg-amber-50 border border-amber-200 text-amber-700 p-4 rounded-xl text-xs text-center font-bold">
+                        Bukti pembayaran sedang direview oleh Admin Cabang.
+                      </div>
+                    )}
+                    
+                    {selectedTagihan.status === 'lunas' && (
+                      <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-xl text-xs text-center font-bold">
+                        Tagihan sudah Lunas! Seluruh pendaftar otomatis tervalidasi.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+                <div className="space-y-4">
+                  {tagihanCabangList.length > 0 ? tagihanCabangList.map((t: any) => (
+                    <div key={t.id} className="p-4 bg-gray-50 border rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs font-mono">
+                      <div>
+                        <strong className="text-brand-brown-dark text-sm block">{t.agenda_nama || 'Agenda'}</strong>
+                        <p className="text-gray-500 mt-1">Status: <span className={`font-bold px-2 py-0.5 rounded uppercase ${t.status === 'lunas' ? 'bg-green-100 text-green-700' : t.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{t.status}</span></p>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          setSelectedTagihan(t);
+                          // Fetch participants
+                          const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
+                          const res = await fetch(`/api/agenda/${t.agenda_id}/registrants`);
+                          if(res.ok) {
+                            const data = await res.json();
+                            setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
+                          }
+                        }}
+                        className="bg-brand-brown-dark text-white px-4 py-2 rounded-xl font-bold shrink-0"
+                      >
+                        Buka Tagihan
+                      </button>
+                    </div>
+                  )) : (
+                    <p className="text-center text-gray-500 italic p-8">Belum ada tagihan kolektif dari Cabang.</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1962,7 +2142,12 @@ export default function PortalDkr() {
 
           <button onClick={() => setActiveTab('agenda')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'agenda' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>
             <Calendar className={`${activeTab === 'agenda' ? 'w-6 h-6' : 'w-5 h-5'}`} />
-            <span className="text-[10px] font-bold">Kegiatan</span>
+            <span className="text-[10px] font-bold">Lokal</span>
+          </button>
+          
+          <button onClick={() => setActiveTab('tagihan_cabang')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'tagihan_cabang' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>
+            <Lock className={`${activeTab === 'tagihan_cabang' ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            <span className="text-[10px] font-bold">Cabang</span>
           </button>
           
           <button onClick={() => setActiveTab('laporan')} className={`flex flex-col items-center gap-1.5 ${activeTab === 'laporan' ? 'text-brand-brown-dark' : 'text-gray-400'}`}>

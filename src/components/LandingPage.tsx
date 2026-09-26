@@ -382,10 +382,7 @@ export default function LandingPage() {
       return;
     }
 
-    if (selectedAgenda.is_camp_fee_required && !buktiPaymentUrl) {
-      alert('Harap upload bukti pembayaran camp fee terlebih dahulu.');
-      return;
-    }
+    // Bukti bayar untuk kolektif dikelola di Portal DKR
 
     setRegisterLoading(true);
     try {
@@ -1932,21 +1929,7 @@ export default function LandingPage() {
                         </div>
                       )}
 
-                      {/* Camp Fee Upload (if applicable) */}
-                      {selectedAgenda?.is_camp_fee_required && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
-                          <p className="text-[10px] font-bold text-amber-700 uppercase">
-                            Camp Fee: Rp {(selectedAgenda.camp_fee || 0).toLocaleString('id-ID')}
-                          </p>
-                          <p className="text-[10px] text-amber-600">Upload satu bukti transfer untuk seluruh kontingen.</p>
-                          <input type="file" accept="image/*" onChange={handleBuktiPaymentUpload}
-                            className="w-full text-[10px] text-gray-500 bg-white border border-amber-200 rounded-lg px-3 py-2" />
-                          {buktiPaymentUploading && <p className="text-[10px] text-amber-500 animate-pulse font-mono">Uploading...</p>}
-                          {buktiPaymentUrl && !buktiPaymentUploading && (
-                            <p className="text-[10px] text-green-600 font-bold">✅ Bukti pembayaran tersimpan</p>
-                          )}
-                        </div>
-                      )}
+                      {/* Camp Fee for Kolektif is handled in DKR Portal */}
 
                       <button type="submit" disabled={registerLoading || !agendaConfig}
                         className="w-full bg-gradient-to-r from-brand-orange to-brand-green text-white font-extrabold text-sm py-3.5 rounded-xl shadow-md uppercase tracking-wider hover:brightness-110 disabled:opacity-50 transition-all cursor-pointer">

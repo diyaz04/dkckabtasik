@@ -93,6 +93,7 @@ export default function PortalAdmin() {
   const [agendaSaving, setAgendaSaving] = useState(false);
 
   // Form Builder & Dashboard state
+  const [isAddAgendaModalOpen, setIsAddAgendaModalOpen] = useState(false);
   const [selectedBuilderAgenda, setSelectedBuilderAgenda] = useState<AgendaKegiatan | null>(null);
   const [selectedDashboardAgenda, setSelectedDashboardAgenda] = useState<AgendaKegiatan | null>(null);
   const [formFields, setFormFields] = useState<any[]>([]);
@@ -101,8 +102,15 @@ export default function PortalAdmin() {
   const [isQrCheckin, setIsQrCheckin] = useState(false);
   const [registrants, setRegistrants] = useState<any[]>([]);
   const [showScanner, setShowScanner] = useState(false);
-  const [agendaDashboardTab, setAgendaDashboardTab] = useState<'semua' | 'menunggu' | 'lunas' | 'checkin'>('semua');
+  const [agendaDashboardTab, setAgendaDashboardTab] = useState<'semua' | 'menunggu' | 'lunas' | 'checkin' | 'tagihan_kwarran'>('semua');
   const [viewRegistrant, setViewRegistrant] = useState<any | null>(null);
+  const [tagihanKwarranList, setTagihanKwarranList] = useState<any[]>([]);
+  
+  // Tagihan Kolektif Action States
+  const [isRejectTagihanModalOpen, setIsRejectTagihanModalOpen] = useState(false);
+  const [rejectTagihanId, setRejectTagihanId] = useState('');
+  const [rejectTagihanCatatan, setRejectTagihanCatatan] = useState('');
+
   // User management states
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -606,6 +614,11 @@ export default function PortalAdmin() {
       const registrantsRes = await fetch(`/api/agenda/${agenda.id}/registrants`);
       const regs = await registrantsRes.json();
       setRegistrants(regs);
+
+      // Load tagihan kolektif
+      const tagihanRes = await fetch(`/api/tagihan_kolektif?agenda_id=${agenda.id}`);
+      const tagihanList = await tagihanRes.json();
+      setTagihanKwarranList(tagihanList);
     } catch (e) {
       console.error(e);
     }
@@ -1733,6 +1746,54 @@ export default function PortalAdmin() {
 
                   return (
                     <div className="space-y-6">
+                      {/* MODAL TOLAK TAGIHAN */}
+                      {isRejectTagihanModalOpen && (
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl relative my-8">
+                            <button onClick={() => setIsRejectTagihanModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                              <X className="w-5 h-5" />
+                            </button>
+                            <h3 className="font-extrabold text-lg text-brand-red mb-4 border-b pb-2">Tolak Tagihan Kwarran</h3>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Alasan Penolakan</label>
+                                <textarea
+                                  value={rejectTagihanCatatan}
+                                  onChange={(e) => setRejectTagihanCatatan(e.target.value)}
+                                  placeholder="Berikan alasan agar DKR bisa memperbaiki..."
+                                  rows={3}
+                                  className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2 text-xs text-gray-800 focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/10"
+                                />
+                              </div>
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch('/api/tagihan_kolektif/status', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ 
+                                        tagihan_id: rejectTagihanId, 
+                                        status: 'ditolak',
+                                        catatan_admin: rejectTagihanCatatan
+                                      })
+                                    });
+                                    if (res.ok) {
+                                      const tagihanRes = await fetch(`/api/tagihan_kolektif?agenda_id=${selectedDashboardAgenda.id}`);
+                                      setTagihanKwarranList(await tagihanRes.json());
+                                      setIsRejectTagihanModalOpen(false);
+                                      setRejectTagihanCatatan('');
+                                    }
+                                  } catch (e) { console.error(e); }
+                                }}
+                                className="w-full bg-brand-red hover:bg-brand-red/90 text-white font-extrabold text-xs py-3 rounded-xl uppercase shadow"
+                              >
+                                Konfirmasi Penolakan
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* MODAL VIEW DETAIL PESERTA */}
                       {viewRegistrant && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
@@ -1855,10 +1916,75 @@ export default function PortalAdmin() {
                               </>
                             )}
                             <button onClick={() => setAgendaDashboardTab('checkin')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'checkin' ? 'bg-brand-green text-white' : 'bg-gray-100 text-gray-500'}`}>Sudah Check-in</button>
+                            {(pendaftaranTipe === 'kolektif' || pendaftaranTipe === 'keduanya') && (
+                              <button onClick={() => setAgendaDashboardTab('tagihan_kwarran')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'tagihan_kwarran' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Verifikasi Tagihan Kwarran</button>
+                            )}
                           </div>
                         </div>
                         
-                        {filteredRegistrants.length > 0 ? (
+                        {agendaDashboardTab === 'tagihan_kwarran' ? (
+                          <div className="space-y-4 font-mono text-xs text-gray-700">
+                            {tagihanKwarranList.length > 0 ? tagihanKwarranList.map((tagihan) => {
+                              const kwarran = kecamatanList.find(k => k.id === tagihan.kwarran_id)?.nama || tagihan.kwarran_id;
+                              return (
+                                <div key={tagihan.id} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                  <div>
+                                    <h5 className="font-extrabold text-sm text-brand-brown-dark">{kwarran}</h5>
+                                    <p className="text-gray-500 mt-1">Status: <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${tagihan.status === 'lunas' ? 'bg-green-100 text-green-700' : tagihan.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{tagihan.status}</span></p>
+                                    <p className="text-gray-500 mt-1">Total: <span className="font-bold text-gray-800">Rp {tagihan.total_tagihan?.toLocaleString('id-ID')}</span></p>
+                                  </div>
+                                  <div className="flex gap-2 shrink-0">
+                                    {tagihan.bukti_bayar_url ? (
+                                      <a href={tagihan.bukti_bayar_url} target="_blank" rel="noreferrer" className="bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-3 py-1.5 rounded-xl font-bold flex items-center gap-2">
+                                        <Eye className="w-3.5 h-3.5" /> Lihat Bukti
+                                      </a>
+                                    ) : (
+                                      <span className="text-gray-400 italic">Belum ada bukti</span>
+                                    )}
+                                    
+                                    {tagihan.status === 'menunggu_verifikasi' && (
+                                      <>
+                                        <button 
+                                          onClick={async () => {
+                                            if(!confirm('Setujui tagihan ini? (Pendaftar akan otomatis diset lunas)')) return;
+                                            try {
+                                              const res = await fetch('/api/tagihan_kolektif/status', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ tagihan_id: tagihan.id, status: 'lunas' })
+                                              });
+                                              if (res.ok) {
+                                                const tagihanRes = await fetch(`/api/tagihan_kolektif?agenda_id=${selectedDashboardAgenda.id}`);
+                                                setTagihanKwarranList(await tagihanRes.json());
+                                                // Reload registrants to get updated lunas status
+                                                const regRes = await fetch(`/api/agenda/${selectedDashboardAgenda.id}/registrants`);
+                                                setRegistrants(await regRes.json());
+                                              }
+                                            } catch(e) {}
+                                          }}
+                                          className="bg-brand-green/10 text-brand-green border border-brand-green/20 hover:bg-brand-green/20 px-3 py-1.5 rounded-xl font-bold flex items-center gap-2"
+                                        >
+                                          <Check className="w-3.5 h-3.5" /> Setujui
+                                        </button>
+                                        <button 
+                                          onClick={() => {
+                                            setRejectTagihanId(tagihan.id);
+                                            setIsRejectTagihanModalOpen(true);
+                                          }}
+                                          className="bg-brand-red/10 text-brand-red border border-brand-red/20 hover:bg-brand-red/20 px-3 py-1.5 rounded-xl font-bold flex items-center gap-2"
+                                        >
+                                          <X className="w-3.5 h-3.5" /> Tolak
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            }) : (
+                              <p className="text-center text-gray-400 italic p-8 bg-gray-50 rounded-2xl border border-dashed">Belum ada tagihan kwarran.</p>
+                            )}
+                          </div>
+                        ) : filteredRegistrants.length > 0 ? (
                           <div className="space-y-3 font-mono text-xs text-gray-700">
                             {filteredRegistrants.map((reg, idx) => (
                               <div key={reg.id} className="p-4 bg-white border rounded-xl border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:border-brand-green/30 transition-colors">
@@ -1896,8 +2022,9 @@ export default function PortalAdmin() {
                 })()}
               </div>
             ) : selectedBuilderAgenda ? (
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div className="flex justify-between items-center border-b pb-4">
+              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                <div className="bg-white rounded-3xl p-6 max-w-5xl w-full shadow-2xl relative my-8 h-[90vh] flex flex-col">
+                  <div className="flex justify-between items-center border-b pb-4 shrink-0">
                   <div>
                     <span className="text-[10px] text-brand-orange font-mono font-bold uppercase tracking-wider block mb-1">Rancang Schema Online Form</span>
                     <h4 className="font-extrabold text-xl text-brand-brown-dark tracking-tight">Formulir: {selectedBuilderAgenda.nama_kegiatan}</h4>
@@ -2079,11 +2206,17 @@ export default function PortalAdmin() {
                   </div>
                 </div>
               </div>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="space-y-6 relative">
               
               {/* Left Form: Add Agenda */}
-              <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-5">
+              {isAddAgendaModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                  <div className="bg-white rounded-3xl p-6 shadow-2xl space-y-5 relative max-w-lg w-full my-8">
+                    <button type="button" onClick={() => setIsAddAgendaModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100 transition-colors z-10">
+                      <X className="w-5 h-5" />
+                    </button>
                 <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-orange pb-2">
                   Tambah Agenda Baru
                 </h3>
@@ -2230,14 +2363,19 @@ export default function PortalAdmin() {
                     Tambah Agenda
                   </button>
                 </form>
-              </div>
+                  </div>
+                </div>
+              )}
 
               {/* Middle List: Action Center */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-6">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-extrabold text-xl text-brand-brown-dark tracking-tight">Daftar Agenda Kegiatan & Aktivitas</h3>
+                  <button onClick={() => setIsAddAgendaModalOpen(true)} className="bg-brand-brown-dark hover:bg-brand-brown-dark/95 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl uppercase flex items-center gap-2 cursor-pointer shadow">
+                    <Plus className="w-4 h-4" /> Tambah Kegiatan
+                  </button>
+                </div>
                 <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
-                  <h3 className="font-extrabold text-base text-brand-brown-dark mb-4 tracking-tight border-b pb-2">
-                    Daftar Agenda Kegiatan & Aktivitas
-                  </h3>
 
                   <div className="space-y-4">
                     {agendaList.map((a) => (
