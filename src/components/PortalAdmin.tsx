@@ -1895,6 +1895,190 @@ export default function PortalAdmin() {
                   );
                 })()}
               </div>
+            ) : selectedBuilderAgenda ? (
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <span className="text-[10px] text-brand-orange font-mono font-bold uppercase tracking-wider block mb-1">Rancang Schema Online Form</span>
+                    <h4 className="font-extrabold text-xl text-brand-brown-dark tracking-tight">Formulir: {selectedBuilderAgenda.nama_kegiatan}</h4>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedBuilderAgenda(null)}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    Kembali ke Daftar
+                  </button>
+                </div>
+
+                {/* Form Builder configuration */}
+                <div className="space-y-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-8 bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-bold font-mono text-gray-600">Tipe Pendaftaran:</label>
+                      <select 
+                        value={pendaftaranTipe} onChange={(e) => setPendaftaranTipe(e.target.value as any)}
+                        className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-mono font-bold text-gray-800 focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange"
+                      >
+                        <option value="mandiri">Mandiri Sahaja (Perorangan)</option>
+                        <option value="kolektif">Kolektif Kontingen (Ranting/Gudep)</option>
+                        <option value="keduanya">Keduanya (Bisa memilih)</option>
+                      </select>
+                    </div>
+                    
+                    <div className="hidden md:block w-px h-12 bg-gray-300"></div>
+
+                    <div className="flex flex-col gap-3">
+                      <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer hover:text-brand-green transition-colors">
+                        <input type="checkbox" checked={isQrValidasi} onChange={(e) => setIsQrValidasi(e.target.checked)} className="w-4 h-4 rounded text-brand-green border-gray-300 focus:ring-brand-green" />
+                        Tampilkan QR Validasi di Bukti PDF
+                      </label>
+                      <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer hover:text-brand-green transition-colors">
+                        <input type="checkbox" checked={isQrCheckin} onChange={(e) => setIsQrCheckin(e.target.checked)} className="w-4 h-4 rounded text-brand-green border-gray-300 focus:ring-brand-green" />
+                        Tampilkan QR Check-in di Bukti PDF
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Fields Designer list */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold font-mono text-gray-500 uppercase tracking-widest block">Struktur Fields Formulir</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormFields([...formFields, { id: `f${Date.now().toString().substr(-4)}`, label: 'Field Baru', type: 'text', required: false }])}
+                        className="bg-brand-green/10 hover:bg-brand-green/20 text-brand-green font-extrabold text-[10px] px-4 py-2 rounded-xl uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Plus className="w-4 h-4" /> Tambah Field
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {formFields.map((field, idx) => (
+                        <div key={field.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs font-mono transition-all hover:border-brand-orange/30">
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="bg-brand-orange/10 text-brand-orange font-bold px-2 py-1 rounded-lg text-[10px] border border-brand-orange/20">{field.id}</span>
+                            <div className="flex-1 max-w-sm">
+                              <label className="block text-[9px] text-gray-400 mb-1">Label Field</label>
+                              <input 
+                                type="text" value={field.label}
+                                onChange={(e) => {
+                                  const list = [...formFields];
+                                  list[idx].label = e.target.value;
+                                  setFormFields(list);
+                                }}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-sans text-sm text-brand-brown-dark font-bold focus:bg-white focus:border-brand-orange focus:outline-none transition-colors"
+                                placeholder="Cth: Nama Lengkap"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-end lg:items-center gap-4">
+                            <div>
+                              <label className="block text-[9px] text-gray-400 mb-1">Tipe Input</label>
+                              <select 
+                                value={field.type}
+                                onChange={(e) => {
+                                  const list = [...formFields];
+                                  list[idx].type = e.target.value;
+                                  setFormFields(list);
+                                }}
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:border-brand-orange focus:outline-none transition-colors min-w-[140px]"
+                              >
+                                <option value="text">Text Pendek</option>
+                                <option value="number">Angka (Numeric)</option>
+                                <option value="select">Dropdown Pilihan</option>
+                                <option value="textarea">Teks Panjang</option>
+                              </select>
+                            </div>
+
+                            <div className="flex items-center h-full pb-2 lg:pb-0">
+                              <label className="flex items-center gap-2 font-bold text-xs text-gray-600 cursor-pointer hover:text-brand-orange transition-colors">
+                                <input 
+                                  type="checkbox" checked={field.required}
+                                  onChange={(e) => {
+                                    const list = [...formFields];
+                                    list[idx].required = e.target.checked;
+                                    setFormFields(list);
+                                  }}
+                                  className="w-4 h-4 rounded text-brand-orange border-gray-300 focus:ring-brand-orange"
+                                /> Wajib Diisi
+                              </label>
+                            </div>
+
+                            <button
+                              onClick={() => setFormFields(formFields.filter((_, i) => i !== idx))}
+                              className="text-brand-red bg-brand-red/10 hover:bg-brand-red/20 hover:text-red-700 p-2.5 rounded-xl transition-colors mb-0.5 lg:mb-0"
+                              title="Hapus Field"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Dropdown Options details */}
+                          {field.type === 'select' && (
+                            <div className="w-full lg:w-full lg:col-span-full pt-3 mt-3 lg:mt-0 border-t lg:border-t-0 border-dashed border-gray-200">
+                              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Opsi Dropdown</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                {(field.options || []).map((opt: string, optIdx: number) => (
+                                  <div key={optIdx} className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const list = [...formFields];
+                                        const newOptions = [...(list[idx].options || [])];
+                                        newOptions[optIdx] = e.target.value;
+                                        list[idx].options = newOptions;
+                                        setFormFields(list);
+                                      }}
+                                      placeholder={`Opsi ${optIdx + 1}`}
+                                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange transition-all"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const list = [...formFields];
+                                        const newOptions = [...(list[idx].options || [])];
+                                        newOptions.splice(optIdx, 1);
+                                        list[idx].options = newOptions;
+                                        setFormFields(list);
+                                      }}
+                                      className="text-gray-400 hover:text-brand-red hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                    >
+                                      <Trash className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const list = [...formFields];
+                                    list[idx].options = [...(list[idx].options || []), ''];
+                                    setFormFields(list);
+                                  }}
+                                  className="text-[10px] font-bold text-brand-orange bg-brand-orange/5 border border-brand-orange/20 hover:bg-brand-orange/10 px-3 py-1.5 rounded-lg flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <Plus className="w-3 h-3" /> Tambah Opsi
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action save builder schema */}
+                  <div className="pt-6 border-t flex justify-end">
+                    <button
+                      onClick={handleSaveFormSchema}
+                      className="bg-brand-orange hover:bg-orange-600 text-white font-extrabold text-xs px-6 py-3 rounded-xl flex items-center gap-2 cursor-pointer shadow-md transition-colors"
+                    >
+                      <Save className="w-4 h-4" /> Simpan Struktur Form
+                    </button>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
               
@@ -2112,176 +2296,6 @@ export default function PortalAdmin() {
                   </div>
                 </div>
 
-                {/* Custom Online Form Config Builder Component */}
-                {selectedBuilderAgenda && (
-                  <div className="bg-white border-2 border-brand-orange rounded-3xl p-6 sm:p-8 shadow-md space-y-6">
-                    <div className="flex justify-between items-center border-b pb-3">
-                      <div>
-                        <span className="text-[10px] text-brand-orange font-mono font-bold uppercase tracking-wider block">Rancang Schema Online Form</span>
-                        <h4 className="font-extrabold text-base text-brand-brown-dark tracking-tight">Formulir: {selectedBuilderAgenda.nama_kegiatan}</h4>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedBuilderAgenda(null)}
-                        className="text-gray-400 hover:text-black font-bold text-xs"
-                      >
-                        ✕ Sembunyikan
-                      </button>
-                    </div>
-
-                    {/* Form Builder configuration */}
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6 border-b pb-4 mb-4">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-bold font-mono text-gray-600 shrink-0">Tipe Pendaftaran:</label>
-                          <select 
-                            value={pendaftaranTipe} onChange={(e) => setPendaftaranTipe(e.target.value as any)}
-                            className="bg-gray-50 border rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-gray-800"
-                          >
-                            <option value="mandiri">Mandiri Sahaja (Perorangan)</option>
-                            <option value="kolektif">Kolektif Kontingen (Ranting/Gudep)</option>
-                            <option value="keduanya">Keduanya (Bisa memilih)</option>
-                          </select>
-                        </div>
-                        
-                        <div className="flex flex-col gap-1 border-l pl-0 sm:pl-6">
-                          <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                            <input type="checkbox" checked={isQrValidasi} onChange={(e) => setIsQrValidasi(e.target.checked)} className="rounded text-brand-green focus:ring-brand-green" />
-                            Tampilkan QR Validasi di PDF
-                          </label>
-                          <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                            <input type="checkbox" checked={isQrCheckin} onChange={(e) => setIsQrCheckin(e.target.checked)} className="rounded text-brand-green focus:ring-brand-green" />
-                            Tampilkan QR Check-in di PDF
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Fields Designer list */}
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest block">Struktur Fields Formulir</span>
-                        
-                        {formFields.map((field, idx) => (
-                          <div key={field.id} className="bg-gray-50 p-3 rounded-xl border border-gray-150 flex flex-wrap gap-3 items-center justify-between text-xs font-mono">
-                            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                              <span className="bg-brand-orange/15 text-brand-orange font-bold px-1.5 py-0.5 rounded text-[10px]">{field.id}</span>
-                              <input 
-                                type="text" value={field.label}
-                                onChange={(e) => {
-                                  const list = [...formFields];
-                                  list[idx].label = e.target.value;
-                                  setFormFields(list);
-                                }}
-                                className="bg-white border rounded px-2 py-1 flex-1 font-sans text-xs text-brand-brown-dark font-bold"
-                              />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <select 
-                                value={field.type}
-                                onChange={(e) => {
-                                  const list = [...formFields];
-                                  list[idx].type = e.target.value;
-                                  setFormFields(list);
-                                }}
-                                className="bg-white border rounded px-2 py-1 text-[11px]"
-                              >
-                                <option value="text">Text Input</option>
-                                <option value="number">Numeric</option>
-                                <option value="select">Dropdown Select</option>
-                                <option value="textarea">Paragraph Box</option>
-                              </select>
-
-                              <label className="flex items-center gap-1 font-bold text-[10px] text-gray-500">
-                                <input 
-                                  type="checkbox" checked={field.required}
-                                  onChange={(e) => {
-                                    const list = [...formFields];
-                                    list[idx].required = e.target.checked;
-                                    setFormFields(list);
-                                  }}
-                                /> Wajib
-                              </label>
-
-                              <button
-                                onClick={() => setFormFields(formFields.filter((_, i) => i !== idx))}
-                                className="text-brand-red hover:bg-brand-red/10 p-1.5 rounded"
-                              >
-                                ✕
-                              </button>
-                            </div>
-
-                            {/* Dropdown Options details */}
-                            {field.type === 'select' && (
-                              <div className="w-full pt-2 border-t border-dashed mt-2">
-                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Opsi Dropdown</label>
-                                <div className="space-y-2">
-                                  {(field.options || []).map((opt: string, optIdx: number) => (
-                                    <div key={optIdx} className="flex items-center gap-2">
-                                      <input
-                                        type="text"
-                                        value={opt}
-                                        onChange={(e) => {
-                                          const list = [...formFields];
-                                          const newOptions = [...(list[idx].options || [])];
-                                          newOptions[optIdx] = e.target.value;
-                                          list[idx].options = newOptions;
-                                          setFormFields(list);
-                                        }}
-                                        placeholder={`Opsi ${optIdx + 1}`}
-                                        className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-800 focus:outline-none focus:border-brand-orange"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const list = [...formFields];
-                                          const newOptions = [...(list[idx].options || [])];
-                                          newOptions.splice(optIdx, 1);
-                                          list[idx].options = newOptions;
-                                          setFormFields(list);
-                                        }}
-                                        className="text-gray-400 hover:text-brand-red p-1 rounded-lg"
-                                      >
-                                        <Trash className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  ))}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const list = [...formFields];
-                                      list[idx].options = [...(list[idx].options || []), ''];
-                                      setFormFields(list);
-                                    }}
-                                    className="text-[10px] font-bold text-brand-orange bg-brand-orange/10 hover:bg-brand-orange/20 px-3 py-1.5 rounded-lg flex items-center gap-1 mt-1 transition-colors cursor-pointer"
-                                  >
-                                    <Plus className="w-3 h-3" /> Tambah Opsi
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-
-                        <button
-                          type="button"
-                          onClick={() => setFormFields([...formFields, { id: `f${Date.now().toString().substr(-4)}`, label: 'Field Baru', type: 'text', required: false }])}
-                          className="bg-brand-green hover:bg-brand-green/90 text-white font-extrabold text-[10px] px-3 py-1.5 rounded-xl uppercase tracking-wider flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" /> Tambah Field
-                        </button>
-                      </div>
-
-                      {/* Action save builder schema */}
-                      <div className="pt-4 border-t flex gap-3 justify-end">
-                        <button
-                          onClick={handleSaveFormSchema}
-                          className="bg-brand-brown-dark hover:bg-brand-brown-dark/95 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow"
-                        >
-                          <Save className="w-4 h-4" /> Simpan Struktur Form
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
             </div>
