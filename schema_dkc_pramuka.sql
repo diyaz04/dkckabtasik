@@ -16,6 +16,7 @@ create table if not exists kecamatan (
   nama_kecamatan text not null,
   slug text unique not null,
   is_dkr_aktif boolean not null default true,
+  wilayah text,
   latitude numeric,
   longitude numeric
 );
@@ -159,7 +160,10 @@ create table if not exists agenda_kegiatan (
   status_publikasi boolean not null default false,
   is_aktif_pendaftaran boolean not null default false,
   is_tanggal_diputuskan boolean default true,
-  bulan_rencana text                   -- format 'YYYY-MM'
+  bulan_rencana text,                   -- format 'YYYY-MM'
+  is_camp_fee_required boolean not null default false,
+  camp_fee numeric default 0,
+  dashboard_config jsonb
 );
 
 -- =====================================================================
@@ -180,6 +184,24 @@ create table if not exists pendaftaran_peserta (
   kecamatan_id text references kecamatan(id) on delete set null,
   data_peserta jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
+);
+
+-- =====================================================================
+-- 9B. TAGIHAN KOLEKTIF KWARRAN
+-- =====================================================================
+
+create table if not exists tagihan_kolektif (
+  id uuid primary key default gen_random_uuid(),
+  agenda_id uuid not null references agenda_kegiatan(id) on delete cascade,
+  kecamatan_id text not null references kecamatan(id) on delete cascade,
+  jumlah_peserta_terverifikasi int not null default 0,
+  total_tagihan numeric not null default 0,
+  bukti_bayar_url text,
+  status text not null default 'pending' check (status in ('pending', 'menunggu_verifikasi', 'lunas', 'ditolak')),
+  catatan text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(agenda_id, kecamatan_id)
 );
 
 -- =====================================================================

@@ -13,6 +13,7 @@ export interface Kecamatan {
   nama_kecamatan: string;
   slug: string;
   is_dkr_aktif: boolean;
+  wilayah?: string;
   latitude: number;
   longitude: number;
 }
@@ -122,6 +123,14 @@ export interface AgendaKegiatan {
   bulan_rencana?: string; // Format: 'YYYY-MM', e.g. '2026-08'
   camp_fee?: number;
   is_camp_fee_required?: boolean;
+  dashboard_config?: {
+    show_stats: boolean;
+    show_kwarran_chart: boolean;
+    show_wilayah_chart: boolean;
+    show_gender_chart: boolean;
+    show_table: boolean;
+    gender_field_id: string;
+  };
 }
 
 export interface FormFieldConfig {

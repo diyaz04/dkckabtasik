@@ -111,6 +111,19 @@ export default function PortalAdmin() {
   const [rejectTagihanId, setRejectTagihanId] = useState('');
   const [rejectTagihanCatatan, setRejectTagihanCatatan] = useState('');
 
+  // Dashboard Analytics & Wilayah Config States
+  const [filterStatus, setFilterStatus] = useState<string>('semua');
+  const [filterWilayah, setFilterWilayah] = useState<string>('semua');
+  const [filterKwarran, setFilterKwarran] = useState<string>('semua');
+  const [filterGender, setFilterGender] = useState<string>('semua');
+  
+  const [isDashboardConfigModalOpen, setIsDashboardConfigModalOpen] = useState(false);
+  const [tempDashboardConfig, setTempDashboardConfig] = useState<any>(null);
+
+  const [isWilayahConfigModalOpen, setIsWilayahConfigModalOpen] = useState(false);
+  const [tempWilayahData, setTempWilayahData] = useState<any[]>([]);
+  const [wilayahSaving, setWilayahSaving] = useState(false);
+
   // User management states
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -1721,29 +1734,74 @@ export default function PortalAdmin() {
               <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm">
                 {(() => {
                   const genderField = formFields.find(f => /kelamin|gender|jk/i.test(f.label));
-                  let maleCount = 0;
-                  let femaleCount = 0;
-                  if (genderField) {
-                    registrants.forEach(reg => {
-                      const val = String(reg.data_peserta[genderField.id] || '').toLowerCase();
+                  const dashConf = selectedDashboardAgenda.dashboard_config || {
+                    show_stats: true, show_kwarran_chart: true, show_wilayah_chart: true, show_gender_chart: true, show_table: true, gender_field_id: ''
+                  };
+                  
+                  // Compute Data with Global Filters
+                  let filteredRegistrants = registrants.filter(reg => {
+                    // Status Filter
+                    if (filterStatus === 'menunggu') { if (!(reg.data_peserta?._bukti_bayar && !reg.data_peserta?._is_lunas)) return false; }
+                    else if (filterStatus === 'lunas') { if (!reg.data_peserta?._is_lunas) return false; }
+                    else if (filterStatus === 'checkin') { if (!reg.data_peserta?._is_hadir) return false; }
+                    
+                    // Kwarran Filter
+                    if (filterKwarran !== 'semua' && reg.kecamatan_id !== filterKwarran) return false;
+                    
+                    // Wilayah Filter
+                    if (filterWilayah !== 'semua') {
+                      const keca = kecamatanList.find((k) => k.id === reg.kecamatan_id);
+                      if ((keca?.wilayah || 'Belum diatur') !== filterWilayah) return false;
+                    }
+                    
+                    // Gender Filter
+                    if (filterGender !== 'semua' && dashConf.gender_field_id) {
+                      const val = String(reg.data_peserta[dashConf.gender_field_id] || '').toLowerCase();
+                      if (filterGender === 'l' && !/^(laki|putra|pa|l)/i.test(val)) return false;
+                      if (filterGender === 'p' && !/^(perempuan|putri|pi|p)/i.test(val)) return false;
+                    }
+                    return true;
+                  });
+
+                  // Statistics
+                  let maleCount = 0; let femaleCount = 0;
+                  if (dashConf.gender_field_id) {
+                    filteredRegistrants.forEach(reg => {
+                      const val = String(reg.data_peserta[dashConf.gender_field_id] || '').toLowerCase();
                       if (/^(laki|putra|pa|l)/i.test(val)) maleCount++;
                       if (/^(perempuan|putri|pi|p)/i.test(val)) femaleCount++;
                     });
                   }
 
-                  const uniqueKwarran = new Set(registrants.map(r => r.kecamatan_id).filter(Boolean));
-                  const kwarranPercentage = kecamatanList.length > 0 
-                    ? Math.round((uniqueKwarran.size / kecamatanList.length) * 100) 
-                    : 0;
+                  const uniqueKwarran = new Set(filteredRegistrants.map(r => r.kecamatan_id).filter(Boolean));
+                  const kwarranPercentage = kecamatanList.length > 0 ? Math.round((uniqueKwarran.size / kecamatanList.length) * 100) : 0;
 
-                  const filteredRegistrants = registrants.filter(reg => {
-                    if (agendaDashboardTab === 'semua') return true;
-                    if (agendaDashboardTab === 'menunggu') return reg.data_peserta?._bukti_bayar && !reg.data_peserta?._is_lunas;
-                    if (agendaDashboardTab === 'lunas') return reg.data_peserta?._is_lunas;
-                    if (agendaDashboardTab === 'checkin') return reg.data_peserta?._is_hadir;
-                    return true;
+                  // Data for Recharts
+                  const kwarranDataMap = {};
+                  const wilayahDataMap = {};
+                  filteredRegistrants.forEach(reg => {
+                    if (reg.kecamatan_id) {
+                      kwarranDataMap[reg.kecamatan_id] = (kwarranDataMap[reg.kecamatan_id] || 0) + 1;
+                      const keca = kecamatanList.find((k) => k.id === reg.kecamatan_id);
+                      const wilayah = keca?.wilayah || 'Belum diatur';
+                      wilayahDataMap[wilayah] = (wilayahDataMap[wilayah] || 0) + 1;
+                    }
                   });
 
+                  const kwarranChartData = Object.keys(kwarranDataMap).map(kId => ({
+                    name: kecamatanList.find((k) => k.id === kId)?.nama_kecamatan || kId,
+                    jumlah: kwarranDataMap[kId]
+                  })).sort((a,b) => b.jumlah - a.jumlah);
+
+                  const wilayahChartData = Object.keys(wilayahDataMap).map(w => ({ name: w, value: wilayahDataMap[w] }));
+                  const genderChartData = [
+                    { name: 'Putra', value: maleCount, color: '#3B82F6' },
+                    { name: 'Putri', value: femaleCount, color: '#EC4899' }
+                  ].filter(d => d.value > 0);
+
+                  // Unique wilayahs for filter dropdown
+                  const uniqueWilayahList = Array.from(new Set(kecamatanList.map((k) => k.wilayah).filter(Boolean)));
+                  const COLORS = ['#10B981', '#F59E0B', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E'];
                   return (
                     <div className="space-y-6">
                       {/* MODAL TOLAK TAGIHAN */}
@@ -1916,7 +1974,7 @@ export default function PortalAdmin() {
                               </>
                             )}
                             <button onClick={() => setAgendaDashboardTab('checkin')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'checkin' ? 'bg-brand-green text-white' : 'bg-gray-100 text-gray-500'}`}>Sudah Check-in</button>
-                            {(pendaftaranTipe === 'kolektif' || pendaftaranTipe === 'keduanya') && (
+                            {(selectedDashboardAgenda.tipe_pendaftaran === 'kolektif' || selectedDashboardAgenda.tipe_pendaftaran === 'keduanya') && (
                               <button onClick={() => setAgendaDashboardTab('tagihan_kwarran')} className={`shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase transition-all ${agendaDashboardTab === 'tagihan_kwarran' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>Verifikasi Tagihan Kwarran</button>
                             )}
                           </div>
