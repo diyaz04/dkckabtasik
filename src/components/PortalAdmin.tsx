@@ -2139,10 +2139,11 @@ export default function PortalAdmin() {
                     
                     <div className="space-y-3">
                       {formFields.map((field, idx) => (
-                        <div key={field.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs font-mono transition-all hover:border-brand-orange/30">
-                          <div className="flex items-center gap-3 flex-1">
-                            <span className="bg-brand-orange/10 text-brand-orange font-bold px-2 py-1 rounded-lg text-[10px] border border-brand-orange/20">{field.id}</span>
-                            <div className="flex-1 max-w-sm">
+                        <div key={field.id} className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex flex-col gap-4 text-xs font-mono transition-all hover:border-brand-orange/30">
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 flex-1 w-full lg:w-auto">
+                              <span className="bg-brand-orange/10 text-brand-orange font-bold px-2 py-1 rounded-lg text-[10px] border border-brand-orange/20">{field.id}</span>
+                              <div className="flex-1 w-full">
                               <label className="block text-[9px] text-gray-400 mb-1">Label Field</label>
                               <input 
                                 type="text" value={field.label}
@@ -2198,10 +2199,11 @@ export default function PortalAdmin() {
                               <Trash className="w-4 h-4" />
                             </button>
                           </div>
+                          </div> {/* end inner wrapper */}
 
                           {/* Dropdown Options details */}
                           {field.type === 'select' && (
-                            <div className="w-full lg:w-full lg:col-span-full pt-3 mt-3 lg:mt-0 border-t lg:border-t-0 border-dashed border-gray-200">
+                            <div className="w-full pt-3 border-t border-dashed border-gray-200">
                               <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Opsi Dropdown</label>
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {(field.options || []).map((opt: string, optIdx: number) => (
