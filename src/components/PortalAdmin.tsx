@@ -11,6 +11,7 @@ import {
 } from '../types';
 import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/imageUpload';
 import * as XLSX from 'xlsx';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import CheckinScanner from './CheckinScanner';
 import { ScanLine, CheckCircle } from 'lucide-react';
 import GreetingBanner from './GreetingBanner';
@@ -1904,17 +1905,96 @@ export default function PortalAdmin() {
                           </div>
                         </div>
                       )}
+                      {/* MODAL PENGATURAN DASHBOARD ANALYTICS */}
+                      {isDashboardConfigModalOpen && (
+                        <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-10 pb-20 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl relative my-8">
+                            <button onClick={() => setIsDashboardConfigModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                              <X className="w-5 h-5" />
+                            </button>
+                            <h3 className="font-extrabold text-lg text-brand-brown-dark mb-4 border-b pb-2">Pengaturan Dashboard</h3>
+                            <div className="space-y-4 text-xs font-mono">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={tempDashboardConfig?.show_stats ?? true} onChange={e => setTempDashboardConfig({...tempDashboardConfig, show_stats: e.target.checked})} className="rounded text-brand-green focus:ring-brand-green/20" />
+                                <span>Tampilkan Kartu Statistik Utama</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={tempDashboardConfig?.show_kwarran_chart ?? true} onChange={e => setTempDashboardConfig({...tempDashboardConfig, show_kwarran_chart: e.target.checked})} className="rounded text-brand-green focus:ring-brand-green/20" />
+                                <span>Tampilkan Bar Chart Peserta per Kwarran</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={tempDashboardConfig?.show_wilayah_chart ?? true} onChange={e => setTempDashboardConfig({...tempDashboardConfig, show_wilayah_chart: e.target.checked})} className="rounded text-brand-green focus:ring-brand-green/20" />
+                                <span>Tampilkan Pie Chart Peserta per Wilayah</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" checked={tempDashboardConfig?.show_gender_chart ?? true} onChange={e => setTempDashboardConfig({...tempDashboardConfig, show_gender_chart: e.target.checked})} className="rounded text-brand-green focus:ring-brand-green/20" />
+                                <span>Tampilkan Pie Chart Jenis Kelamin</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer border-b pb-4">
+                                <input type="checkbox" checked={tempDashboardConfig?.show_table ?? true} onChange={e => setTempDashboardConfig({...tempDashboardConfig, show_table: e.target.checked})} className="rounded text-brand-green focus:ring-brand-green/20" />
+                                <span>Tampilkan Tabel Detail Peserta</span>
+                              </label>
 
-                      <div className="flex justify-between items-center">
+                              <div>
+                                <label className="block font-bold text-gray-500 mb-1">Field Data Jenis Kelamin</label>
+                                <select 
+                                  value={tempDashboardConfig?.gender_field_id || ''}
+                                  onChange={e => setTempDashboardConfig({...tempDashboardConfig, gender_field_id: e.target.value})}
+                                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2"
+                                >
+                                  <option value="">-- Pilih Field --</option>
+                                  {formFields.map(f => (
+                                    <option key={f.id} value={f.id}>{f.label}</option>
+                                  ))}
+                                </select>
+                                <p className="text-[10px] text-gray-400 mt-1">Pilih field form yang berisi pilihan (Laki-laki/Perempuan) untuk Pie Chart.</p>
+                              </div>
+
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/agenda/${selectedDashboardAgenda.id}/dashboard_config`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ dashboard_config: tempDashboardConfig })
+                                    });
+                                    if (res.ok) {
+                                      setSelectedDashboardAgenda({ ...selectedDashboardAgenda, dashboard_config: tempDashboardConfig });
+                                      setIsDashboardConfigModalOpen(false);
+                                    }
+                                  } catch (e) { console.error(e); }
+                                }}
+                                className="w-full bg-brand-green hover:bg-brand-green/90 text-white font-extrabold text-xs py-3 rounded-xl uppercase shadow mt-4"
+                              >
+                                Simpan Konfigurasi
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-4">
                           {selectedDashboardAgenda.logo_url && (
                             <img src={selectedDashboardAgenda.logo_url} alt="Logo Kegiatan" className="w-12 h-12 rounded-xl object-cover shadow-sm border border-gray-100" />
                           )}
-                          <h3 className="font-display font-extrabold text-xl text-brand-brown-dark tracking-tight">
-                            Dashboard Kegiatan: {selectedDashboardAgenda.nama_kegiatan}
-                          </h3>
+                          <div>
+                            <h3 className="font-display font-extrabold text-xl text-brand-brown-dark tracking-tight">
+                              Dashboard: {selectedDashboardAgenda.nama_kegiatan}
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">Analytics & Data Center</p>
+                          </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => {
+                              setTempDashboardConfig(dashConf);
+                              setIsDashboardConfigModalOpen(true);
+                            }}
+                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow-sm transition-colors border border-gray-200"
+                          >
+                            <Settings className="w-4 h-4" /> Pengaturan Dashboard
+                          </button>
                           <button
                             onClick={() => setShowScanner(true)}
                             className="bg-brand-brown-dark hover:bg-brand-brown-dark/90 text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
@@ -1929,7 +2009,6 @@ export default function PortalAdmin() {
                           </button>
                         </div>
                       </div>
-
                       {showScanner && (
                         <CheckinScanner 
                           onClose={() => setShowScanner(false)} 
@@ -1940,24 +2019,138 @@ export default function PortalAdmin() {
                         />
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Pendaftar</span>
-                          <span className="text-4xl font-display font-extrabold text-brand-orange">{registrants.length}</span>
+                      {/* GLOBAL FILTERS */}
+                      <div className="bg-brand-brown-dark/5 border border-brand-brown-dark/10 rounded-2xl p-4 mb-6 mt-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Search className="w-4 h-4 text-brand-brown-dark" />
+                          <span className="text-xs font-bold text-brand-brown-dark uppercase tracking-wider">Filter Global</span>
                         </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm text-center">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Laki-laki / Perempuan</span>
-                          <span className="text-3xl font-display font-extrabold text-brand-green">
-                            {genderField ? `${maleCount}L / ${femaleCount}P` : 'N/A'}
-                          </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-[10px] text-gray-500 font-bold mb-1">Status</label>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full text-xs border-gray-200 rounded-lg p-2 bg-white">
+                              <option value="semua">Semua Status</option>
+                              {selectedDashboardAgenda.is_camp_fee_required && (
+                                <>
+                                  <option value="menunggu">Menunggu Verifikasi</option>
+                                  <option value="lunas">Sudah Lunas</option>
+                                </>
+                              )}
+                              <option value="checkin">Sudah Check-in</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 font-bold mb-1">Wilayah</label>
+                            <select value={filterWilayah} onChange={e => setFilterWilayah(e.target.value)} className="w-full text-xs border-gray-200 rounded-lg p-2 bg-white">
+                              <option value="semua">Semua Wilayah</option>
+                              <option value="Belum diatur">Belum diatur</option>
+                              {uniqueWilayahList.map(w => (
+                                <option key={w as string} value={w as string}>{w as string}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 font-bold mb-1">Kwarran</label>
+                            <select value={filterKwarran} onChange={e => setFilterKwarran(e.target.value)} className="w-full text-xs border-gray-200 rounded-lg p-2 bg-white">
+                              <option value="semua">Semua Kwarran</option>
+                              {kecamatanList.map((k:any) => (
+                                <option key={k.id} value={k.id}>{k.nama_kecamatan}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-gray-500 font-bold mb-1">Jenis Kelamin</label>
+                            <select value={filterGender} onChange={e => setFilterGender(e.target.value)} className="w-full text-xs border-gray-200 rounded-lg p-2 bg-white" disabled={!dashConf.gender_field_id}>
+                              <option value="semua">Semua</option>
+                              <option value="l">Putra</option>
+                              <option value="p">Putri</option>
+                            </select>
+                          </div>
                         </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Keterwakilan Kwarran</span>
-                          <span className="text-4xl font-display font-extrabold text-brand-brown-dark">{kwarranPercentage}%</span>
-                          <span className="text-xs text-gray-400 mt-1">{uniqueKwarran.size} dari {kecamatanList.length} Kwarran</span>
+                      </div>
+
+                      {dashConf.show_stats && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Pendaftar Tersaring</span>
+                            <span className="text-4xl font-display font-extrabold text-brand-orange">{filteredRegistrants.length}</span>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm text-center">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Putra / Putri</span>
+                            <span className="text-3xl font-display font-extrabold text-brand-green">
+                              {dashConf.gender_field_id ? `${maleCount} Pa / ${femaleCount} Pi` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col justify-center items-center shadow-sm">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Keterwakilan Kwarran</span>
+                            <span className="text-4xl font-display font-extrabold text-brand-brown-dark">{kwarranPercentage}%</span>
+                            <span className="text-xs text-gray-400 mt-1">{uniqueKwarran.size} dari {kecamatanList.length} Kwarran</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        {dashConf.show_kwarran_chart && (
+                          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm h-72 flex flex-col">
+                            <h4 className="text-xs font-bold text-gray-500 uppercase mb-4 text-center">Sebaran Kwarran</h4>
+                            <div className="flex-1 min-h-0">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={kwarranChartData.slice(0, 10)} margin={{ top: 5, right: 5, left: -20, bottom: 25 }}>
+                                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-45} textAnchor="end" height={40} />
+                                  <YAxis tick={{ fontSize: 10 }} />
+                                  <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                                  <Bar dataKey="jumlah" fill="#10B981" radius={[4, 4, 0, 0]} name="Peserta" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-72">
+                          {dashConf.show_wilayah_chart && (
+                            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col items-center">
+                              <h4 className="text-xs font-bold text-gray-500 uppercase mb-2 text-center">Sebaran Wilayah</h4>
+                              <div className="w-full flex-1 min-h-0">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <PieChart>
+                                    <Pie data={wilayahChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`} labelLine={false}>
+                                      {wilayahChartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                      ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {dashConf.show_gender_chart && (
+                            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col items-center">
+                              <h4 className="text-xs font-bold text-gray-500 uppercase mb-2 text-center">Komposisi Gender</h4>
+                              <div className="w-full flex-1 min-h-0">
+                                {genderChartData.length > 0 ? (
+                                  <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                      <Pie data={genderChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60}>
+                                        {genderChartData.map((entry, index) => (
+                                          <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                      </Pie>
+                                      <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                                      <Legend wrapperStyle={{ fontSize: '10px' }} />
+                                    </PieChart>
+                                  </ResponsiveContainer>
+                                ) : (
+                                  <div className="h-full flex items-center justify-center text-xs text-gray-400 text-center">Field Gender<br/>Belum Diatur</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
+                      {dashConf.show_table && (
                       <div className="pt-6 border-t border-gray-100">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                           <h5 className="font-extrabold text-base text-brand-brown-dark tracking-tight">
@@ -2075,12 +2268,13 @@ export default function PortalAdmin() {
                           <p className="text-sm text-gray-500 italic p-8 text-center bg-gray-50 rounded-2xl border border-dashed">Belum ada peserta di kategori ini.</p>
                         )}
                       </div>
+                      )}
                     </div>
                   );
                 })()}
               </div>
             ) : selectedBuilderAgenda ? (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+              <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-10 pb-20 bg-black/60 backdrop-blur-sm overflow-y-auto">
                 <div className="bg-white rounded-3xl p-6 max-w-5xl w-full shadow-2xl relative my-8 h-[90vh] flex flex-col">
                   <div className="flex justify-between items-center border-b pb-4 shrink-0">
                   <div>
@@ -2272,7 +2466,7 @@ export default function PortalAdmin() {
               
               {/* Left Form: Add Agenda */}
               {isAddAgendaModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-10 pb-20 bg-black/60 backdrop-blur-sm overflow-y-auto">
                   <div className="bg-white rounded-3xl p-6 shadow-2xl space-y-5 relative max-w-lg w-full my-8">
                     <button type="button" onClick={() => setIsAddAgendaModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100 transition-colors z-10">
                       <X className="w-5 h-5" />
