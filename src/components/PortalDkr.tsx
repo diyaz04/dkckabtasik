@@ -168,7 +168,7 @@ export default function PortalDkr() {
       }
 
       // Fetch Tagihan Kolektif Kwarran
-      const tagihanRes = await fetch(`/api/tagihan_kolektif?kwarran_id=${kecaObj.id}`);
+      const tagihanRes = await fetch(`/api/tagihan_kolektif?kecamatan_id=${kecaObj.id}`);
       if (tagihanRes.ok) {
         setTagihanCabangList(await tagihanRes.json());
       }
@@ -1521,7 +1521,7 @@ export default function PortalDkr() {
                                 setTagihanReceipt('');
                                 // reload
                                 const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
-                                const tRes = await fetch(`/api/tagihan_kolektif?kwarran_id=${keca.id}`);
+                                const tRes = await fetch(`/api/tagihan_kolektif?kecamatan_id=${keca.id}`);
                                 setTagihanCabangList(await tRes.json());
                               }
                             } catch(e) {}

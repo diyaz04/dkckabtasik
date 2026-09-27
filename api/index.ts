@@ -647,6 +647,33 @@ app.post('/api/agenda/:id/config', async (req: Request, res: Response) => {
   }
 });
 
+async function updateTagihanKolektif(agenda_id: string, kecamatan_id: string) {
+  if (!agenda_id || !kecamatan_id) return;
+  try {
+    const { data: agenda } = await supabaseAdmin.from('agenda_kegiatan').select('camp_fee, is_camp_fee_required, tipe_pendaftaran').eq('id', agenda_id).single();
+    if (!agenda || !agenda.is_camp_fee_required) return;
+    if (agenda.tipe_pendaftaran === 'mandiri') return; // pure mandiri doesn't have collective bill
+
+    const { data: registrants } = await supabaseAdmin.from('pendaftaran_peserta').select('id').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id);
+    const count = registrants ? registrants.length : 0;
+    
+    if (count > 0) {
+      const total_tagihan = count * (agenda.camp_fee || 0);
+      
+      const { data: existing } = await supabaseAdmin.from('tagihan_kolektif').select('id, status').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id).maybeSingle();
+      if (existing) {
+        if (existing.status !== 'lunas' && existing.status !== 'menunggu_verifikasi') {
+          await supabaseAdmin.from('tagihan_kolektif').update({ jumlah_peserta_terverifikasi: count, total_tagihan }).eq('id', existing.id);
+        }
+      } else {
+        await supabaseAdmin.from('tagihan_kolektif').insert({ agenda_id, kecamatan_id, jumlah_peserta_terverifikasi: count, total_tagihan, status: 'belum_bayar' });
+      }
+    }
+  } catch (e) {
+    console.error('Error updating tagihan:', e);
+  }
+}
+
 app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -659,6 +686,7 @@ app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
     }).select('id').single();
     
     if (error) throw error;
+    updateTagihanKolektif(id, kecamatan_id);
     res.json({ success: true, id: data.id });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -702,6 +730,7 @@ app.post('/api/agenda/:id/register-batch', async (req: Request, res: Response) =
       .select('id');
 
     if (error) throw error;
+    updateTagihanKolektif(id, kecamatan_id);
     res.json({ success: true, ids: data?.map((d: any) => d.id) || [] });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -973,6 +1002,25 @@ app.post('/api/laporan_kegiatan/process', async (req: Request, res: Response) =>
 });
 
 // ── Tagihan Kolektif Kwarran ──
+
+app.post('/api/tagihan_kolektif/sync', async (req: Request, res: Response) => {
+  try {
+    const { kecamatan_id } = req.body;
+    if (!kecamatan_id) return res.status(400).json({error: 'kecamatan_id required'});
+    
+    // Ambil semua agenda yang butuh tagihan
+    const { data: agendas } = await supabaseAdmin.from('agenda_kegiatan').select('*').eq('is_camp_fee_required', true).neq('tipe_pendaftaran', 'mandiri');
+    
+    for (const agenda of (agendas || [])) {
+      await updateTagihanKolektif(agenda.id, kecamatan_id);
+    }
+    
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/tagihan_kolektif', async (req: Request, res: Response) => {
   try {
     const { agenda_id, kecamatan_id } = req.query;

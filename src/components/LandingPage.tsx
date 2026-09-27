@@ -422,11 +422,7 @@ export default function LandingPage() {
     if (!selectedAgenda) return;
     setRegisterLoading(true);
 
-    if (selectedAgenda.is_camp_fee_required && !buktiPaymentUrl) {
-      alert('Harap upload bukti pembayaran camp fee terlebih dahulu.');
-      setRegisterLoading(false);
-      return;
-    }
+    // Pembayaran untuk mandiri dikelola oleh DKR, tidak perlu upload bukti di sini
 
     if (!kolektifKecamatanId) {
       alert('Harap pilih Asal Kwartir Ranting terlebih dahulu.');
@@ -2019,19 +2015,15 @@ export default function LandingPage() {
                         )}
                       </div>
 
-                      {/* Camp Fee Upload for Mandiri */}
+                      {/* Info Pembayaran for Mandiri */}
                       {selectedAgenda?.is_camp_fee_required && (
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
                           <p className="text-[10px] font-bold text-amber-700 uppercase">
-                            Camp Fee: Rp {(selectedAgenda.camp_fee || 0).toLocaleString('id-ID')} <span className="text-red-500">*</span>
+                            Camp Fee: Rp {(selectedAgenda.camp_fee || 0).toLocaleString('id-ID')}
                           </p>
-                          <p className="text-[10px] text-amber-600">Upload bukti transfer sebelum submit.</p>
-                          <input type="file" accept="image/*" onChange={handleBuktiPaymentUpload}
-                            className="w-full text-[10px] text-gray-500 bg-white border border-amber-200 rounded-lg px-3 py-2" />
-                          {buktiPaymentUploading && <p className="text-[10px] text-amber-500 animate-pulse font-mono">Uploading...</p>}
-                          {buktiPaymentUrl && !buktiPaymentUploading && (
-                            <p className="text-[10px] text-green-600 font-bold">✅ Bukti pembayaran tersimpan</p>
-                          )}
+                          <p className="text-[10px] text-amber-700 font-mono italic">
+                            Pembayaran dikoordinir dan dibayarkan secara kolektif melalui Dewan Kerja Ranting (DKR) masing-masing. Silakan hubungi DKR Anda setelah mendaftar.
+                          </p>
                         </div>
                       )}
 
