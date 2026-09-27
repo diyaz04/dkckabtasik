@@ -314,7 +314,7 @@ export default function PortalDkr() {
         body: JSON.stringify({
           id: laporanEditingId || undefined,
           kecamatan_id: kecamatan.id,
-          kecamatan_nama: kecamatan.nama_kecamatan,
+          
           jenis_dokumen: laporanJenis,
           nama_kegiatan: kegiatanData.nama || 'Laporan Kegiatan',
           tanggal_pelaksanaan: validDate,
@@ -491,12 +491,16 @@ export default function PortalDkr() {
         })
       });
 
+      let resData;
+      try { resData = await res.json(); } catch(err) { resData = {}; }
       if (res.ok) {
         setBeritaJudul('');
         setBeritaGambar('');
         setBeritaKonten('');
         alert('Pengajuan berita berhasil! Menunggu moderasi & persetujuan dari DKC.');
         loadDkrData();
+      } else {
+        alert('Gagal upload: ' + (resData.error || 'Terjadi kesalahan'));
       }
     } catch (e: any) {
       console.error(e);
