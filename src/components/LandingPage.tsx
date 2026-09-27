@@ -109,7 +109,7 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
   
   const recentBerita = useMemo(() => {
     return beritaList.filter(b => {
-      if (b.status !== 'published') return false;
+      if (b.status !== 'approved') return false;
       const diffTime = new Date().getTime() - new Date(b.created_at).getTime();
       const diffDays = diffTime / (1000 * 60 * 60 * 24); 
       return diffDays <= 7;
