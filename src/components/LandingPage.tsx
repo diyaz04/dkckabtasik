@@ -244,7 +244,7 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
           {activeTab === 'berita' && recentBerita.map(berita => (
             <div key={berita.id} className="bg-white rounded-2xl p-3 border border-gray-100 flex gap-4 items-center group shadow-sm hover:shadow-md transition-shadow">
               <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                <img src={berita.foto_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=400'} alt={berita.judul} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img src={berita.gambar_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=400'} alt={berita.judul} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-[9px] font-bold text-brand-orange uppercase tracking-wider">Baru Diunggah!</span>
@@ -252,7 +252,7 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
                   {berita.judul}
                 </h4>
                 <a 
-                  href={`/#/news/${berita.slug}`}
+                  href={`/#/berita/${berita.slug}`}
                   onClick={handleClose}
                   className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-green mt-2 hover:underline uppercase"
                 >
