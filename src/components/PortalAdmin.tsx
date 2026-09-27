@@ -1,3 +1,4 @@
+import LaporanPdfTemplate from './LaporanPdfTemplate';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
