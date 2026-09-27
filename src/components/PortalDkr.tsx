@@ -84,6 +84,7 @@ export default function PortalDkr() {
   const [selectedTagihan, setSelectedTagihan] = useState<any>(null);
   const [tagihanPeserta, setTagihanPeserta] = useState<any[]>([]);
   const [tagihanReceipt, setTagihanReceipt] = useState('');
+  const [agendaFormSchema, setAgendaFormSchema] = useState<any[]>([]);
   const [tagihanUploading, setTagihanUploading] = useState(false);
 
   // Password Update
@@ -717,8 +718,20 @@ export default function PortalDkr() {
   const verifiedBeritaCount = berita.filter(b => b.status === 'approved' || b.status === 'rejected').length;
   const totalNotifs = verifiedLaporanCount + verifiedBeritaCount;
 
-  const getPesertaName = (data: any): string => {
+  const getPesertaName = (data: any, schema?: any[]): string => {
     if (!data) return 'Tanpa Nama';
+    const activeSchema = schema || agendaFormSchema;
+    if (activeSchema && activeSchema.length > 0) {
+      // Try to find field labeled "Nama" (or similar) first
+      const namaField = activeSchema.find((f: any) => 
+        f.label?.toLowerCase().includes('nama') || f.label?.toLowerCase().includes('name')
+      );
+      if (namaField && data[namaField.id]) return data[namaField.id];
+      // Fall back to first field's value
+      const firstField = activeSchema[0];
+      if (firstField && data[firstField.id]) return data[firstField.id];
+    }
+    // Direct key fallback
     return data.nama || data.nama_lengkap || data.nama_peserta || data.full_name || (Object.values(data)[0] as string) || 'Tanpa Nama';
   };
   
@@ -1496,7 +1509,7 @@ export default function PortalDkr() {
                       <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {tagihanPeserta.map((p, i) => (
                           <div key={i} className="text-xs font-mono bg-gray-50 p-2 rounded border flex justify-between">
-                            <span>{getPesertaName(p.data_peserta)}</span>
+                            <span>{getPesertaName(p.data_peserta, agendaFormSchema)}</span>
                             <span className={p.data_peserta?._is_lunas ? 'text-brand-green font-bold' : 'text-amber-500'}>{p.data_peserta?._is_lunas ? 'Lunas' : 'Belum Lunas'}</span>
                           </div>
                         ))}
@@ -1617,11 +1630,20 @@ export default function PortalDkr() {
                       <button 
                         onClick={async () => {
                           setSelectedTagihan(t);
-                          // Fetch participants
+                          // Fetch form schema + participants in parallel
                           const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
-                          const res = await fetch(`/api/agenda/${t.agenda_id}/registrants`);
-                          if(res.ok) {
-                            const data = await res.json();
+                          const [configRes, regRes] = await Promise.all([
+                            fetch(`/api/agenda/${t.agenda_id}/config`),
+                            fetch(`/api/agenda/${t.agenda_id}/registrants`)
+                          ]);
+                          if(configRes.ok) {
+                            const cfg = await configRes.json();
+                            setAgendaFormSchema(cfg?.form_schema || []);
+                            // Also populate addPesertaFormData for the modal
+                            if (cfg?.form_schema) setAddPesertaFormData({ form_schema: cfg.form_schema });
+                          }
+                          if(regRes.ok) {
+                            const data = await regRes.json();
                             setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
                           }
                         }}
