@@ -75,6 +75,10 @@ export default function PortalDkr() {
 
   // Tagihan Cabang states
   const [tagihanCabangList, setTagihanCabangList] = useState<any[]>([]);
+  const [activeAgendas, setActiveAgendas] = useState<any[]>([]);
+  const [showAddPesertaModal, setShowAddPesertaModal] = useState(false);
+  const [addPesertaFormData, setAddPesertaFormData] = useState<any>({});
+  const [addPesertaSaving, setAddPesertaSaving] = useState(false);
   const [selectedTagihan, setSelectedTagihan] = useState<any>(null);
   const [tagihanPeserta, setTagihanPeserta] = useState<any[]>([]);
   const [tagihanReceipt, setTagihanReceipt] = useState('');
@@ -171,6 +175,13 @@ export default function PortalDkr() {
       const tagihanRes = await fetch(`/api/tagihan_kolektif?kecamatan_id=${kecaObj.id}`);
       if (tagihanRes.ok) {
         setTagihanCabangList(await tagihanRes.json());
+      }
+
+      // Fetch Agendas
+      const agendaRes = await fetch('/api/agenda');
+      if (agendaRes.ok) {
+        const agData = await agendaRes.json();
+        setActiveAgendas(agData.filter((a: any) => a.tipe_pendaftaran !== 'mandiri' && a.is_published));
       }
 
       // Fetch Laporan Kegiatan
@@ -1451,7 +1462,26 @@ export default function PortalDkr() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div>
-                    <h4 className="font-extrabold text-brand-brown-dark mb-4 text-sm border-b pb-2">Daftar Peserta Kwarran</h4>
+                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                      <h4 className="font-extrabold text-brand-brown-dark text-sm">Daftar Peserta Kwarran</h4>
+                      <button 
+                        onClick={async () => {
+                          const configRes = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/config`);
+                          if (configRes.ok) {
+                            const config = await configRes.json();
+                            if (config && config.form_schema) {
+                              setAddPesertaFormData({ form_schema: config.form_schema });
+                              setShowAddPesertaModal(true);
+                            } else {
+                              alert('Konfigurasi form belum diatur oleh Cabang.');
+                            }
+                          }
+                        }}
+                        className="bg-brand-orange hover:bg-brand-orange/90 text-brand-brown-dark font-extrabold text-[10px] px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Tambah Peserta
+                      </button>
+                    </div>
                     {tagihanPeserta.length > 0 ? (
                       <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {tagihanPeserta.map((p, i) => (
