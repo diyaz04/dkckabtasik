@@ -591,6 +591,7 @@ export default function PortalAdmin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingPersonaliaId || undefined,
           owner_type: 'dkc',
           nama: newPersonNama,
           jabatan: newPersonJabatan,
@@ -602,6 +603,7 @@ export default function PortalAdmin() {
         setNewPersonNama('');
         setNewPersonJabatan('');
         setNewPersonFoto('');
+        setEditingPersonaliaId(null);
         alert('Struktur Pengurus DKC berhasil diperbarui!');
         loadData();
       } else {
@@ -2981,12 +2983,26 @@ export default function PortalAdmin() {
                           <span className="text-[10px] text-gray-400 mt-1 block">{p.jabatan} • {p.golongan}</span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeletePersonalia(p.id)}
-                        className="text-brand-red font-bold text-[10px] ml-4 cursor-pointer"
-                      >
-                        Hapus
-                      </button>
+                      <div className="flex flex-col gap-2 ml-4">
+                        <button
+                          onClick={() => {
+                            setNewPersonNama(p.nama);
+                            setNewPersonJabatan(p.jabatan);
+                            setNewPersonGolongan(p.golongan);
+                            setNewPersonFoto(p.foto_url);
+                            setEditingPersonaliaId(p.id);
+                          }}
+                          className="text-blue-500 hover:text-blue-600 font-bold text-[10px] cursor-pointer text-right"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeletePersonalia(p.id)}
+                          className="text-brand-red hover:text-red-600 font-bold text-[10px] cursor-pointer text-right"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
