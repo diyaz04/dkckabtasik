@@ -12,9 +12,10 @@ export default function Footer() {
       .then((sc: any[]) => {
         const medsos = sc.find(item => item.section_key === 'medsos_dkc');
         if (medsos && medsos.content) {
-          if (medsos.content.instagram) setMedsosIg(medsos.content.instagram);
-          if (medsos.content.youtube) setMedsosYt(medsos.content.youtube);
-          if (medsos.content.tiktok) setMedsosTk(medsos.content.tiktok);
+          // Compatibility for both old keys and new keys
+          if (medsos.content.instagram || medsos.content.ig) setMedsosIg(medsos.content.instagram || medsos.content.ig);
+          if (medsos.content.youtube || medsos.content.yt) setMedsosYt(medsos.content.youtube || medsos.content.yt);
+          if (medsos.content.tiktok || medsos.content.tk) setMedsosTk(medsos.content.tiktok || medsos.content.tk);
         }
       })
       .catch(() => {});

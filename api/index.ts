@@ -218,6 +218,15 @@ app.get('/api/kecamatan/:slug', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/dkr_profile', async (_req: Request, res: Response) => {
+  try {
+    const { data } = await supabaseAdmin.from('dkr_profile').select('*');
+    res.json(data || []);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/dkr_profile/update', async (req: Request, res: Response) => {
   try {
     const { kecamatan_id, deskripsi, logo_url, medsos_ig, medsos_yt, medsos_tk } = req.body;
