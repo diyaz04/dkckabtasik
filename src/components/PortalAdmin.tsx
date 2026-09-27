@@ -1,6 +1,6 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Edit2, useNavigate } from 'react-router-dom';
 import { 
   BarChart2, Users, Building, FileText, Calendar, Plus, Trash, Check, X,
   Save, Edit, Lock, Eye, AlertCircle, ToggleLeft, ToggleRight, LayoutDashboard, Search, Bell, Menu, Settings,
@@ -81,6 +81,8 @@ export default function PortalAdmin() {
   // Editor states (News)
   const [newsTitle, setNewsTitle] = useState('');
   const [newsContent, setNewsContent] = useState('');
+  const [editingNewsId, setEditingNewsId] = useState<string | null>(null);
+  const [editingNewsAuthor, setEditingNewsAuthor] = useState<any>(null);
   const [newsImage, setNewsImage] = useState('');
   const [newsSaving, setNewsSaving] = useState(false);
 
@@ -475,7 +477,9 @@ export default function PortalAdmin() {
         setNewsTitle('');
         setNewsContent('');
         setNewsImage('');
-        alert('Berita resmi DKC berhasil diterbitkan!');
+        setEditingNewsId(null);
+        setEditingNewsAuthor(null);
+        alert(editingNewsId ? 'Berita berhasil diperbarui!' : 'Berita resmi DKC berhasil diterbitkan!');
         loadData();
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -1751,7 +1755,7 @@ export default function PortalAdmin() {
               {/* Tulis Berita DKC */}
               <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
                 <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-green pb-2">
-                  Tulis Rilis Resmi DKC
+                  {editingNewsId ? 'Edit Berita' : 'Tulis Rilis Resmi DKC'}
                 </h3>
 
                 <form onSubmit={handleSaveNews} className="space-y-4 text-xs font-mono">

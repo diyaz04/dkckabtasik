@@ -57,6 +57,7 @@ export default function PortalDkr() {
   const [beritaJudul, setBeritaJudul] = useState('');
   const [beritaGambar, setBeritaGambar] = useState('');
   const [beritaKonten, setBeritaKonten] = useState('');
+  const [editingBeritaId, setEditingBeritaId] = useState<string | null>(null);
   const [beritaSaving, setBeritaSaving] = useState(false);
 
   // Form Inputs (Local Agenda)
@@ -152,7 +153,9 @@ export default function PortalDkr() {
       setPersonalia(resData.personalia || []);
       setPangkalan(resData.pangkalan || []);
       setPotensialData(resData.data_potensial || null);
-      setBerita(resData.berita || []);
+      const resBerita = await fetch(`/api/berita?kecamatan_id=${kecaObj.id}`);
+      const resBeritaData = await resBerita.json();
+      setBerita(Array.isArray(resBeritaData) ? resBeritaData : (resData.berita || []));
       setAgenda(resData.agenda || []);
       
       setProfile(resData.profile || null);
@@ -508,6 +511,7 @@ export default function PortalDkr() {
         setBeritaJudul('');
         setBeritaGambar('');
         setBeritaKonten('');
+        setEditingBeritaId(null);
         alert('Pengajuan berita berhasil! Menunggu moderasi & persetujuan dari DKC.');
         loadDkrData();
       } else {
