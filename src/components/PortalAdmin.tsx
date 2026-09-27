@@ -2630,11 +2630,13 @@ export default function PortalAdmin() {
                               className="text-[10px] bg-white border border-gray-200 rounded p-1 ml-2 font-mono"
                             >
                               <option value="">- Pilih -</option>
-                              <option value="Utara">Utara</option>
-                              <option value="Selatan">Selatan</option>
-                              <option value="Timur">Timur</option>
-                              <option value="Barat">Barat</option>
-                              <option value="Tengah">Tengah</option>
+                              <option value="Wilayah 1">Wilayah 1</option>
+                              <option value="Wilayah 2">Wilayah 2</option>
+                              <option value="Wilayah 3">Wilayah 3</option>
+                              <option value="Wilayah 4">Wilayah 4</option>
+                              <option value="Wilayah 5">Wilayah 5</option>
+                              <option value="Wilayah 6">Wilayah 6</option>
+                              <option value="Wilayah 7">Wilayah 7</option>
                             </select>
                           </div>
                         ))}
