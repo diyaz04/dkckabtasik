@@ -1505,6 +1505,9 @@ export default function PortalDkr() {
                     {tagihanPeserta.length === 0 && (
                       <p className="text-[10px] text-brand-orange mb-2 italic">Tambahkan peserta terlebih dahulu untuk membuat tagihan resmi.</p>
                     )}
+                    {tagihanPeserta.length === 0 && (
+                      <p className="text-[10px] text-brand-orange mb-2 italic">Tambahkan peserta terlebih dahulu untuk membuat tagihan resmi.</p>
+                    )}
                     <div className="bg-gray-50 p-4 rounded-xl font-mono text-xs space-y-2 border">
                       <div className="flex justify-between"><span>Jumlah Peserta:</span> <span className="font-bold">{tagihanPeserta.length} orang</span></div>
                       <div className="flex justify-between"><span>Camp Fee per orang:</span> <span className="font-bold">Rp {(selectedTagihan.camp_fee || 0).toLocaleString('id-ID')}</span></div>
@@ -1587,11 +1590,23 @@ export default function PortalDkr() {
             ) : (
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
                 <div className="space-y-4">
-                  {tagihanCabangList.length > 0 ? tagihanCabangList.map((t: any) => (
-                    <div key={t.id} className="p-4 bg-gray-50 border rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs font-mono">
+                  {activeAgendas.length > 0 ? activeAgendas.map((agenda: any) => {
+                    const t = tagihanCabangList.find((tag) => tag.agenda_id === agenda.id) || {
+                      id: null,
+                      agenda_id: agenda.id,
+                      agenda_nama: agenda.nama_kegiatan,
+                      status: 'belum_bayar',
+                      camp_fee: agenda.camp_fee || 0
+                    };
+                    return (
+                    <div key={agenda.id} className="p-4 bg-gray-50 border rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs font-mono">
                       <div>
-                        <strong className="text-brand-brown-dark text-sm block">{t.agenda_nama || 'Agenda'}</strong>
-                        <p className="text-gray-500 mt-1">Status: <span className={`font-bold px-2 py-0.5 rounded uppercase ${t.status === 'lunas' ? 'bg-green-100 text-green-700' : t.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{t.status}</span></p>
+                        <strong className="text-brand-brown-dark text-sm block">{agenda.nama_kegiatan}</strong>
+                        {t.id ? (
+                          <p className="text-gray-500 mt-1">Status Pembayaran: <span className={`font-bold px-2 py-0.5 rounded uppercase ${t.status === 'lunas' ? 'bg-green-100 text-green-700' : t.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{t.status}</span></p>
+                        ) : (
+                          <p className="text-gray-500 mt-1">Status: <span className="text-brand-brown-dark/70 italic">Belum ada pendaftar (Belum ada tagihan)</span></p>
+                        )}
                       </div>
                       <button 
                         onClick={async () => {
@@ -1604,13 +1619,13 @@ export default function PortalDkr() {
                             setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
                           }
                         }}
-                        className="bg-brand-brown-dark text-white px-4 py-2 rounded-xl font-bold shrink-0"
+                        className="bg-brand-brown-dark hover:bg-brand-brown-mid transition-colors text-white px-4 py-2 rounded-xl font-bold shrink-0"
                       >
-                        Buka Tagihan
+                        Buka Dashboard
                       </button>
                     </div>
-                  )) : (
-                    <p className="text-center text-gray-500 italic p-8">Belum ada tagihan kolektif dari Cabang.</p>
+                  )}) : (
+                    <p className="text-center text-gray-500 italic p-8">Belum ada kegiatan aktif yang bisa didaftar secara kolektif.</p>
                   )}
                 </div>
               </div>

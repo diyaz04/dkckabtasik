@@ -128,8 +128,8 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
   }, [activeAgendas.length, recentBerita.length]);
 
   useEffect(() => {
-    const hasSeen = sessionStorage.getItem('hasSeenPromo_v3');
-    if ((recentBerita.length > 0 || activeAgendas.length > 0) && !hasSeen) {
+    
+    if (recentBerita.length > 0 || activeAgendas.length > 0) {
       const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
     }
