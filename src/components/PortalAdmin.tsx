@@ -1,11 +1,11 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Edit2, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   BarChart2, Users, Building, FileText, Calendar, Plus, Trash, Check, X,
   Save, Edit, Lock, Eye, AlertCircle, ToggleLeft, ToggleRight, LayoutDashboard, Search, Bell, Menu, Settings,
   RefreshCw, Palette, Upload, Award, ClipboardList, Printer, Clock, ChevronRight, Download, PanelLeft
-} from 'lucide-react';
+, Edit2 } from 'lucide-react';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
   Informasi, SiteContent, FormKegiatanConfig, DataPotensial, Profile, Saka, LaporanKegiatan 
@@ -269,7 +269,7 @@ export default function PortalAdmin() {
       const opt = {
         margin:       10,
         filename:     `Laporan_${laporan.jenis_dokumen}_${laporan.nama_kegiatan.replace(/\s+/g, '_')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
+        image:        { type: 'jpeg' as const, quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };

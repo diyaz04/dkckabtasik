@@ -184,7 +184,7 @@ export default function PortalDkr() {
       const agendaRes = await fetch('/api/agenda');
       if (agendaRes.ok) {
         const agData = await agendaRes.json();
-        setActiveAgendas(agData.filter((a: any) => a.tipe_pendaftaran !== 'mandiri' && a.is_published));
+        setActiveAgendas(agData.filter((a: any) => a.tipe_pendaftaran !== 'mandiri' && a.status_publikasi));
       }
 
       // Fetch Laporan Kegiatan
@@ -298,7 +298,7 @@ export default function PortalDkr() {
     const opt = {
       margin:       0,
       filename:     `Laporan_${laporan.jenis_dokumen}_${laporan.nama_kegiatan.replace(/\s+/g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
+      image:        { type: 'jpeg' as const, quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
@@ -897,7 +897,7 @@ export default function PortalDkr() {
               activeTab === 'tagihan_cabang' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
             }`}
           >
-            <Lock className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Tagihan Cabang</span>}
+            <Lock className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Pendaftaran Kolektif</span>}
           </button>
 
           {/* Kategori: LAPORAN & AKUN */}
@@ -1502,6 +1502,9 @@ export default function PortalDkr() {
                   
                   <div className="space-y-4">
                     <h4 className="font-extrabold text-brand-brown-dark mb-4 text-sm border-b pb-2">Informasi Pembayaran</h4>
+                    {tagihanPeserta.length === 0 && (
+                      <p className="text-[10px] text-brand-orange mb-2 italic">Tambahkan peserta terlebih dahulu untuk membuat tagihan resmi.</p>
+                    )}
                     <div className="bg-gray-50 p-4 rounded-xl font-mono text-xs space-y-2 border">
                       <div className="flex justify-between"><span>Jumlah Peserta:</span> <span className="font-bold">{tagihanPeserta.length} orang</span></div>
                       <div className="flex justify-between"><span>Camp Fee per orang:</span> <span className="font-bold">Rp {(selectedTagihan.camp_fee || 0).toLocaleString('id-ID')}</span></div>
@@ -1536,7 +1539,7 @@ export default function PortalDkr() {
                           </div>
                         )}
                         <button 
-                          disabled={!tagihanReceipt}
+                          disabled={!tagihanReceipt || tagihanPeserta.length === 0}
                           onClick={async () => {
                             if (!tagihanReceipt) return;
                             try {
