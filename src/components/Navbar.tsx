@@ -23,6 +23,22 @@ export default function Navbar() {
     return location.pathname === '/' && location.hash === hash;
   };
 
+  const [showKlasemen, setShowKlasemen] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/site_content')
+      .then(res => res.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data)) {
+          const klasemen = data.find(item => item.section_key === 'klasemen');
+          if (klasemen && klasemen.content) {
+            setShowKlasemen(klasemen.content.show_klasemen !== false);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const isHomeActive = () => {
     return location.pathname === '/' && (!location.hash || location.hash === '#top' || location.hash === '');
   };
@@ -97,9 +113,11 @@ export default function Navbar() {
               </button>
               <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 opacity-0 translate-y-1 invisible group-hover:opacity-100 group-hover:translate-y-0 group-hover:visible transition-all duration-200 z-50">
                 <span className="block px-4 pt-1 pb-1.5 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Ranting &amp; Satuan</span>
-                <Link to="/#klasemen" className="px-4 py-2 text-[11px] font-bold text-[#5C4033] hover:bg-slate-50 hover:text-brand-green flex items-center gap-2 font-mono uppercase transition-colors">
-                  <Trophy className="w-3.5 h-3.5 text-brand-orange" /> Klasemen DKR
-                </Link>
+                {showKlasemen && (
+                  <Link to="/#klasemen" className="px-4 py-2 text-[11px] font-bold text-[#5C4033] hover:bg-slate-50 hover:text-brand-green flex items-center gap-2 font-mono uppercase transition-colors">
+                    <Trophy className="w-3.5 h-3.5 text-brand-orange" /> Klasemen DKR
+                  </Link>
+                )}
                 <Link to="/#saka" className="px-4 py-2 text-[11px] font-bold text-[#5C4033] hover:bg-slate-50 hover:text-brand-green flex items-center gap-2 font-mono uppercase transition-colors">
                   <Tent className="w-3.5 h-3.5 text-brand-orange" /> Satuan Karya (SAKA)
                 </Link>
