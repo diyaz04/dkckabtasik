@@ -1564,7 +1564,7 @@ export default function PortalDkr() {
                           const res = await fetch(`/api/agenda/${t.agenda_id}/registrants`);
                           if(res.ok) {
                             const data = await res.json();
-                            setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
+                            setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id && d.tipe === 'kolektif'));
                           }
                         }}
                         className="bg-brand-brown-dark text-white px-4 py-2 rounded-xl font-bold shrink-0"
