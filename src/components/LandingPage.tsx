@@ -782,14 +782,14 @@ export default function LandingPage() {
               className="pt-4 flex flex-wrap gap-4"
             >
               <a 
-                href="#kegiatan"
+                href="#/#kegiatan"
                 className="bg-brand-brown-dark hover:bg-[#3d2920] text-white font-extrabold text-sm px-8 py-4 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-1.5 uppercase tracking-wider cursor-pointer"
               >
                 {displayHero.cta_text}
                 <ChevronRight className="w-4 h-4" />
               </a>
               <a 
-                href="#peta"
+                href="#/#peta"
                 className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-extrabold text-sm px-7 py-4 rounded-full transition-all flex items-center gap-1.5 uppercase tracking-wider cursor-pointer"
               >
                 Peta DKR
