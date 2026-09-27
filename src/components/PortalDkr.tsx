@@ -717,6 +717,11 @@ export default function PortalDkr() {
   const verifiedBeritaCount = berita.filter(b => b.status === 'approved' || b.status === 'rejected').length;
   const totalNotifs = verifiedLaporanCount + verifiedBeritaCount;
 
+  const getPesertaName = (data: any): string => {
+    if (!data) return 'Tanpa Nama';
+    return data.nama || data.nama_lengkap || data.nama_peserta || data.full_name || (Object.values(data)[0] as string) || 'Tanpa Nama';
+  };
+  
   return (
     <div className="min-h-screen bg-dash-canvas flex flex-col md:flex-row">
       
@@ -1599,10 +1604,6 @@ export default function PortalDkr() {
                       status: 'belum_bayar',
                       camp_fee: agenda.camp_fee || 0
                     };
-                    const getPesertaName = (data: any) => {
-    if (!data) return 'Tanpa Nama';
-    return data.nama || data.nama_lengkap || data.nama_peserta || data.full_name || Object.values(data)[0] || 'Tanpa Nama';
-  };
   return (
                     <div key={agenda.id} className="p-4 bg-gray-50 border rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs font-mono">
                       <div>
