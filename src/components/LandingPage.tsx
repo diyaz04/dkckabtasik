@@ -1816,9 +1816,7 @@ export default function LandingPage() {
                         waktuDaftar={new Date().toLocaleString('id-ID')}
                         tipePendaftaran={registrationType}
                         asalKwarran={
-                          registrationType === 'kolektif' 
-                            ? kecamatanList.find(k => k.id === kolektifKecamatanId)?.nama_kecamatan || ''
-                            : registrationFormData['f2'] || ''
+                          kecamatanList.find(k => k.id === kolektifKecamatanId)?.nama_kecamatan || ''
                         }
                         formData={registrationFormData}
                         formFields={agendaConfig?.form_schema || []}
