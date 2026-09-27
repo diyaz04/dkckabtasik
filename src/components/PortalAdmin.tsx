@@ -54,6 +54,7 @@ export default function PortalAdmin() {
   const [newPersonGolongan, setNewPersonGolongan] = useState<'penegak' | 'pandega' | 'pembina' | 'lainnya'>('pandega');
   const [newPersonFoto, setNewPersonFoto] = useState('');
   const [personaliaSaving, setPersonaliaSaving] = useState(false);
+  const [editingPersonaliaId, setEditingPersonaliaId] = useState<string | null>(null);
 
   // Laporan States
   const [laporanList, setLaporanList] = useState<LaporanKegiatan[]>([]);
@@ -70,6 +71,11 @@ export default function PortalAdmin() {
   const [expandedLaporanId, setExpandedLaporanId] = useState<string | null>(null);
   const [showKlasemen, setShowKlasemen] = useState<boolean>(true);
   const [showLaporanMenu, setShowLaporanMenu] = useState<boolean>(true);
+
+  // Medsos states
+  const [dkcMedsosIg, setDkcMedsosIg] = useState('');
+  const [dkcMedsosYt, setDkcMedsosYt] = useState('');
+  const [dkcMedsosTk, setDkcMedsosTk] = useState('');
 
   // Editor states (News)
   const [newsTitle, setNewsTitle] = useState('');
@@ -199,6 +205,13 @@ export default function PortalAdmin() {
         setHeroBadge(hero.content.badge_text);
         setHeroBgImageUrl(hero.content.bg_image_url || 'https://media.suara.com/pictures/970x544/2023/08/14/79829-hari-pramuka-raimuna-nasional-xii.jpg');
         setHeroBgOpacity(hero.content.bg_opacity !== undefined ? Number(hero.content.bg_opacity) : 0.4);
+      }
+
+      const medsos = sc.find((item: any) => item.section_key === 'medsos_dkc');
+      if (medsos && medsos.content) {
+        setDkcMedsosIg(medsos.content.ig || '');
+        setDkcMedsosYt(medsos.content.yt || '');
+        setDkcMedsosTk(medsos.content.tk || '');
       }
 
       const theme = sc.find((item: any) => item.section_key === 'theme');
@@ -1043,6 +1056,15 @@ export default function PortalAdmin() {
             bg_image_url: heroBgImageUrl,
             bg_opacity: Number(heroBgOpacity)
           }
+        })
+      });
+
+      await fetch('/api/site_content/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section_key: 'medsos_dkc',
+          content: { ig: dkcMedsosIg, yt: dkcMedsosYt, tk: dkcMedsosTk }
         })
       });
 
@@ -3091,6 +3113,28 @@ export default function PortalAdmin() {
                       type="text" required value={heroCta} onChange={(e) => setHeroCta(e.target.value)}
                       placeholder="Jelajahi Kegiatan" className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-3 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
                     />
+                  </div>
+
+                  {/* MEDSOS LINKS */}
+                  <div className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-100 rounded-2xl p-5 sm:p-6 space-y-4 shadow-sm">
+                    <p className="font-extrabold text-xs text-brand-brown-dark uppercase tracking-wider font-mono flex items-center gap-2">
+                      <span>📱</span> Link Media Sosial DKC
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-mono mb-4">Tautan ini akan ditampilkan pada Footer website publik.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Instagram URL</label>
+                        <input type="url" value={dkcMedsosIg} onChange={(e) => setDkcMedsosIg(e.target.value)} placeholder="https://instagram.com/dkctasikmalaya" className="w-full bg-white border border-pink-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">YouTube URL</label>
+                        <input type="url" value={dkcMedsosYt} onChange={(e) => setDkcMedsosYt(e.target.value)} placeholder="https://youtube.com/..." className="w-full bg-white border border-pink-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">TikTok URL</label>
+                        <input type="url" value={dkcMedsosTk} onChange={(e) => setDkcMedsosTk(e.target.value)} placeholder="https://tiktok.com/@dkctasikmalaya" className="w-full bg-white border border-pink-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/20" />
+                      </div>
+                    </div>
                   </div>
 
                   {/* HERO BACKGROUND CONFIGURATION */}

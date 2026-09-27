@@ -220,12 +220,18 @@ app.get('/api/kecamatan/:slug', async (req: Request, res: Response) => {
 
 app.post('/api/dkr_profile/update', async (req: Request, res: Response) => {
   try {
-    const { kecamatan_id, deskripsi, logo_url } = req.body;
+    const { kecamatan_id, deskripsi, logo_url, medsos_ig, medsos_yt, medsos_tk } = req.body;
     const { data: existing } = await supabaseAdmin.from('dkr_profile').select('id').eq('kecamatan_id', kecamatan_id).maybeSingle();
+    
+    const updatePayload: any = { deskripsi, logo_url, updated_at: new Date().toISOString() };
+    if (medsos_ig !== undefined) updatePayload.medsos_ig = medsos_ig;
+    if (medsos_yt !== undefined) updatePayload.medsos_yt = medsos_yt;
+    if (medsos_tk !== undefined) updatePayload.medsos_tk = medsos_tk;
+
     if (existing) {
-      await supabaseAdmin.from('dkr_profile').update({ deskripsi, logo_url, updated_at: new Date().toISOString() }).eq('kecamatan_id', kecamatan_id);
+      await supabaseAdmin.from('dkr_profile').update(updatePayload).eq('kecamatan_id', kecamatan_id);
     } else {
-      await supabaseAdmin.from('dkr_profile').insert({ kecamatan_id, deskripsi, logo_url });
+      await supabaseAdmin.from('dkr_profile').insert({ kecamatan_id, ...updatePayload });
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -493,11 +499,11 @@ app.post('/api/berita/save', async (req: Request, res: Response) => {
     const data = req.body;
     if (!data.judul) return res.status(400).json({ error: 'Judul berita wajib diisi' });
 
-    const slug = data.judul.toLowerCase()
+    const baseSlug = data.judul.toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
-    data.slug = slug;
+    data.slug = `${baseSlug}-${Date.now()}`;
 
     if (data.id) {
       await supabaseAdmin.from('berita').update(data).eq('id', data.id);
