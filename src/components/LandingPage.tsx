@@ -128,7 +128,7 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
   }, [activeAgendas.length, recentBerita.length]);
 
   useEffect(() => {
-    const hasSeen = sessionStorage.getItem('hasSeenPromoPopup');
+    const hasSeen = sessionStorage.getItem('hasSeenPromo_v3');
     if ((recentBerita.length > 0 || activeAgendas.length > 0) && !hasSeen) {
       const timer = setTimeout(() => setIsVisible(true), 1500);
       return () => clearTimeout(timer);
@@ -137,7 +137,7 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
 
   const handleClose = () => {
     setIsVisible(false);
-    sessionStorage.setItem('hasSeenPromoPopup', 'true');
+    sessionStorage.setItem('hasSeenPromo_v3', 'true');
   };
 
   const calculateCountdown = (targetDateStr: string) => {
