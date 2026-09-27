@@ -80,6 +80,7 @@ export default function PortalDkr() {
   const [showAddPesertaModal, setShowAddPesertaModal] = useState(false);
   const [addPesertaFormData, setAddPesertaFormData] = useState<any>({});
   const [addPesertaSaving, setAddPesertaSaving] = useState(false);
+  const [addPesertaFormValues, setAddPesertaFormValues] = useState<any>({});
   const [selectedTagihan, setSelectedTagihan] = useState<any>(null);
   const [tagihanPeserta, setTagihanPeserta] = useState<any[]>([]);
   const [tagihanReceipt, setTagihanReceipt] = useState('');
@@ -1490,7 +1491,7 @@ export default function PortalDkr() {
                       <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {tagihanPeserta.map((p, i) => (
                           <div key={i} className="text-xs font-mono bg-gray-50 p-2 rounded border flex justify-between">
-                            <span>{p.data_peserta?.nama || p.id}</span>
+                            <span>{getPesertaName(p.data_peserta)}</span>
                             <span className={p.data_peserta?._is_lunas ? 'text-brand-green font-bold' : 'text-amber-500'}>{p.data_peserta?._is_lunas ? 'Lunas' : 'Belum Lunas'}</span>
                           </div>
                         ))}
@@ -1598,7 +1599,11 @@ export default function PortalDkr() {
                       status: 'belum_bayar',
                       camp_fee: agenda.camp_fee || 0
                     };
-                    return (
+                    const getPesertaName = (data: any) => {
+    if (!data) return 'Tanpa Nama';
+    return data.nama || data.nama_lengkap || data.nama_peserta || data.full_name || Object.values(data)[0] || 'Tanpa Nama';
+  };
+  return (
                     <div key={agenda.id} className="p-4 bg-gray-50 border rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs font-mono">
                       <div>
                         <strong className="text-brand-brown-dark text-sm block">{agenda.nama_kegiatan}</strong>
@@ -2316,6 +2321,119 @@ export default function PortalDkr() {
         </div>
       </div>
       
-      </div>
+      
+      {/* Modal Tambah Peserta */}
+      {showAddPesertaModal && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+              <h3 className="font-extrabold text-brand-brown-dark text-lg">Tambah Peserta</h3>
+              <button onClick={() => setShowAddPesertaModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+              {addPesertaFormData?.form_schema ? (
+                addPesertaFormData.form_schema.map((f: any) => (
+                  <div key={f.id}>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
+                      {f.label} {f.required && <span className="text-brand-orange">*</span>}
+                    </label>
+                    {f.type === 'select' ? (
+                      <select required={f.required} value={addPesertaFormValues[f.id] || ''}
+                        onChange={(e) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: e.target.value})}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800">
+                        <option value="">-- Pilih salah satu --</option>
+                        {f.options?.map((opt: string) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : f.type === 'textarea' ? (
+                      <textarea required={f.required} value={addPesertaFormValues[f.id] || ''}
+                        onChange={(e) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: e.target.value})}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800" rows={3} />
+                    ) : (
+                      <input type={f.type === 'number' ? 'number' : 'text'} required={f.required}
+                        value={addPesertaFormValues[f.id] || ''}
+                        onChange={(e) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: e.target.value})}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800" />
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-gray-500 text-center py-4">Konfigurasi form belum tersedia.</p>
+              )}
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowAddPesertaModal(false)}
+                className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700"
+              >
+                Batal
+              </button>
+              <button 
+                disabled={addPesertaSaving}
+                onClick={async () => {
+                  if (addPesertaFormData?.form_schema) {
+                    for (const f of addPesertaFormData.form_schema) {
+                      if (f.required && !addPesertaFormValues[f.id]) {
+                        alert(`Kolom "${f.label}" wajib diisi!`);
+                        return;
+                      }
+                    }
+                  }
+                  
+                  setAddPesertaSaving(true);
+                  try {
+                    const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
+                    const res = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/register`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        tipe: 'kolektif',
+                        kecamatan_id: keca.id,
+                        data_peserta: addPesertaFormValues
+                      })
+                    });
+                    
+                    if (res.ok) {
+                      alert('Peserta berhasil ditambahkan!');
+                      setShowAddPesertaModal(false);
+                      setAddPesertaFormValues({});
+                      
+                      const res2 = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/registrants`);
+                      if(res2.ok) {
+                        const data = await res2.json();
+                        setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
+                      }
+                      
+                      const tagihanRes = await fetch(`/api/tagihan_kolektif?kecamatan_id=${keca.id}`);
+                      if (tagihanRes.ok) {
+                        const tList = await tagihanRes.json();
+                        setTagihanCabangList(tList);
+                        const updatedTagihan = tList.find((t: any) => t.agenda_id === selectedTagihan.agenda_id);
+                        if (updatedTagihan) setSelectedTagihan(updatedTagihan);
+                      }
+                    } else {
+                      const err = await res.json();
+                      alert('Gagal: ' + (err.error || 'Terjadi kesalahan'));
+                    }
+                  } catch(e) {
+                    alert('Gagal menambahkan peserta.');
+                  } finally {
+                    setAddPesertaSaving(false);
+                  }
+                }}
+                className="px-6 py-2 bg-brand-orange hover:bg-brand-orange/90 text-brand-brown-dark rounded-xl text-xs font-bold shadow-sm flex items-center gap-2"
+              >
+                {addPesertaSaving ? 'Menyimpan...' : 'Simpan Peserta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+</div>
   );
 }
