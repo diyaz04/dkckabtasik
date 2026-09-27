@@ -496,8 +496,9 @@ export default function PortalDkr() {
         alert('Pengajuan berita berhasil! Menunggu moderasi & persetujuan dari DKC.');
         loadDkrData();
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert('Gagal: ' + e.message);
     } finally {
       setBeritaSaving(false);
     }

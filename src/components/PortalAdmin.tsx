@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BarChart2, Users, Building, FileText, Calendar, Plus, Trash, Check, X,
@@ -12,7 +12,7 @@ import {
 import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/imageUpload';
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
-import CheckinScanner from './CheckinScanner';
+const CheckinScanner = lazy(() => import('./CheckinScanner'));
 import { ScanLine, CheckCircle } from 'lucide-react';
 import GreetingBanner from './GreetingBanner';
 
@@ -2032,13 +2032,13 @@ export default function PortalAdmin() {
                         </div>
                       </div>
                       {showScanner && (
-                        <CheckinScanner 
+                        <Suspense fallback={null}><CheckinScanner 
                           onClose={() => setShowScanner(false)} 
                           onScanSuccess={(code) => {
                             setShowScanner(false);
                             handleScanSuccess(code);
                           }} 
-                        />
+                        /></Suspense>
                       )}
 
                       {/* GLOBAL FILTERS */}
