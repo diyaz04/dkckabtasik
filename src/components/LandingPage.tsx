@@ -879,6 +879,12 @@ export default function LandingPage() {
 
   return (
     <div className="bg-white min-h-screen">
+      <PromoPopup 
+        beritaList={beritaList} 
+        agendaList={agendaList} 
+        themeColors={themeColors} 
+        setKegiatanSubTab={setKegiatanSubTab} 
+      />
       <style>{`
         :root {
           --color-brand-orange: ${themeColors.brandOrange} !important;

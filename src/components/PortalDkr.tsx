@@ -1442,7 +1442,7 @@ export default function PortalDkr() {
         {activeTab === 'tagihan_cabang' && (
           <div className="space-y-8">
             <div className="border-b border-gray-200 pb-4">
-              <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Tagihan Kegiatan Cabang</h1>
+              <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Pendaftaran Kegiatan Kolektif DKR</h1>
               <p className="text-xs text-gray-500 font-mono mt-1">Verifikasi peserta dan bayar tagihan pendaftaran kolektif dari Cabang (DKC).</p>
             </div>
 
