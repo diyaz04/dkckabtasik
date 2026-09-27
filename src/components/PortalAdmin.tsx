@@ -280,6 +280,28 @@ export default function PortalAdmin() {
     }
   };
 
+  // Save Wilayah
+  const handleSaveWilayah = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWilayahSaving(true);
+    try {
+      const res = await fetch('/api/wilayah/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wilayahData: tempWilayahData })
+      });
+      if(res.ok) {
+        alert('Wilayah Kwarran berhasil disimpan!');
+        setIsWilayahConfigModalOpen(false);
+        loadData();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setWilayahSaving(false);
+    }
+  };
+
   // Process / Approve / Reject Laporan Kegiatan
   const handleProcessLaporan = async (e: React.FormEvent) => {
     e.preventDefault();
