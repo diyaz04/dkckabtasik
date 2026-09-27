@@ -446,6 +446,20 @@ app.get('/api/data_potensial', async (req: Request, res: Response) => {
   }
 });
 
+// Save Wilayah Data
+app.post('/api/wilayah/save', async (req: Request, res: Response) => {
+  try {
+    const { wilayahData } = req.body;
+    // wilayahData is array of { id: string, wilayah: string }
+    for (const d of wilayahData) {
+      await supabaseAdmin.from('kecamatan').update({ wilayah: d.wilayah }).eq('id', d.id);
+    }
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/data_potensial/save', async (req: Request, res: Response) => {
   try {
     const data = req.body;
