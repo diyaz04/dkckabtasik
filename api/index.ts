@@ -505,10 +505,17 @@ app.post('/api/berita/save', async (req: Request, res: Response) => {
       .replace(/-+/g, '-');
     data.slug = `${baseSlug}-${Date.now()}`;
 
+    let dbError;
     if (data.id) {
-      await supabaseAdmin.from('berita').update(data).eq('id', data.id);
+      const { error } = await supabaseAdmin.from('berita').update(data).eq('id', data.id);
+      dbError = error;
     } else {
-      await supabaseAdmin.from('berita').insert(data);
+      const { error } = await supabaseAdmin.from('berita').insert(data);
+      dbError = error;
+    }
+    if (dbError) {
+      console.error('Gagal simpan berita:', dbError);
+      return res.status(500).json({ error: dbError.message });
     }
     res.json({ success: true });
   } catch (error: any) {

@@ -395,7 +395,7 @@ export default function PortalAdmin() {
           judul: newsTitle,
           konten: newsContent,
           gambar_url: newsImage || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800',
-          author_id: user?.id || 'admin',
+          author_id: user?.user_id || null,
           author_name: user?.nama || 'Admin DKC',
           status: 'approved',
           published_at: new Date().toISOString()
@@ -408,9 +408,13 @@ export default function PortalAdmin() {
         setNewsImage('');
         alert('Berita resmi DKC berhasil diterbitkan!');
         loadData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Gagal menerbitkan berita: ${errData.error || 'Terjadi kesalahan'}`);
       }
     } catch (e) {
       console.error(e);
+      alert('Gagal menerbitkan berita: koneksi bermasalah.');
     } finally {
       setNewsSaving(false);
     }
