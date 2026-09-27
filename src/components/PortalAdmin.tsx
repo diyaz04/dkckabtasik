@@ -380,6 +380,26 @@ export default function PortalAdmin() {
     }
   };
 
+  const handleDeleteBerita = async (id: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus berita ini?')) return;
+    try {
+      const res = await fetch('/api/berita/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      if (res.ok) {
+        loadData();
+      } else {
+        const data = await res.json();
+        alert('Gagal menghapus berita: ' + (data.error || 'Terjadi kesalahan'));
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert('Gagal menghapus berita: ' + e.message);
+    }
+  };
+
   // Create News DKC
   const handleSaveNews = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1733,6 +1753,52 @@ export default function PortalAdmin() {
                     {newsSaving ? 'Menerbitkan...' : 'Terbitkan Sekarang'}
                   </button>
                 </form>
+              </div>
+
+              {/* Daftar Berita Terbit */}
+              <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+                <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-green pb-2 mb-4">
+                  Daftar Berita & Publikasi
+                </h3>
+                <div className="space-y-4">
+                  {beritaList.length === 0 ? (
+                    <p className="text-xs text-gray-500 italic text-center py-4">Belum ada berita yang dipublikasikan.</p>
+                  ) : (
+                    beritaList.map((berita) => (
+                      <div key={berita.id} className="flex flex-col sm:flex-row gap-4 p-4 border border-gray-100 rounded-2xl hover:border-brand-green/30 transition-colors bg-gray-50/50">
+                        <img 
+                          src={berita.gambar_url} 
+                          alt={berita.judul} 
+                          className="w-full sm:w-32 h-24 object-cover rounded-xl"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-md ${berita.status === 'approved' ? 'bg-brand-green/10 text-brand-green' : 'bg-brand-orange/10 text-brand-orange'}`}>
+                              {berita.status === 'approved' ? 'TERBIT' : berita.status}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              {new Date(berita.published_at || Date.now()).toLocaleDateString('id-ID')}
+                            </span>
+                          </div>
+                          <h4 className="font-bold text-sm text-gray-800 line-clamp-1 mb-1">{berita.judul}</h4>
+                          <p className="text-xs text-gray-500 line-clamp-2" dangerouslySetInnerHTML={{__html: berita.konten}}></p>
+                          <div className="mt-2 text-[10px] text-brand-teal font-medium">
+                            Oleh: {berita.author_name}
+                          </div>
+                        </div>
+                        <div className="flex items-center sm:flex-col justify-end gap-2 shrink-0">
+                           <button 
+                            onClick={() => handleDeleteBerita(berita.id)}
+                            className="p-2 text-gray-400 hover:text-brand-red hover:bg-red-50 rounded-xl transition-colors"
+                            title="Hapus Berita"
+                           >
+                             <Trash className="w-4 h-4" />
+                           </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
 
             </div>

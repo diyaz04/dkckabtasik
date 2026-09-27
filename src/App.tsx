@@ -62,7 +62,7 @@ export default function App() {
         />
         
         <Route 
-          path="/berita/:id" 
+          path="/berita/:slug" 
           element={
             <PublicLayout>
               <NewsDetailPage />
