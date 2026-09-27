@@ -427,13 +427,19 @@ export default function LandingPage() {
       return;
     }
 
+    if (!kolektifKecamatanId) {
+      alert('Harap pilih Asal Kwartir Ranting terlebih dahulu.');
+      setRegisterLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/agenda/${selectedAgenda.id}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipe: registrationType,
-          kecamatan_id: null,
+          kecamatan_id: kolektifKecamatanId || null,
           data_peserta: {
             ...registrationFormData,
             ...(buktiPaymentUrl ? { _bukti_bayar: buktiPaymentUrl } : {})
@@ -1958,6 +1964,16 @@ export default function LandingPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Asal Kwarran Ranting (For Mandiri too) */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Asal Kwartir Ranting <span className="text-brand-red">*</span></label>
+                        <select required value={kolektifKecamatanId} onChange={e => setKolektifKecamatanId(e.target.value)}
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-medium">
+                          <option value="">-- Pilih Kecamatan / Ranting --</option>
+                          {kecamatanList.map(k => <option key={k.id} value={k.id}>{k.nama_kecamatan}</option>)}
+                        </select>
+                      </div>
 
                       {/* Schema fields */}
                       <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">

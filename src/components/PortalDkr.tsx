@@ -31,6 +31,9 @@ export default function PortalDkr() {
   const [profile, setProfile] = useState<DkrProfile | null>(null);
   const [deskripsi, setDeskripsi] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [medsosIg, setMedsosIg] = useState('');
+  const [medsosYt, setMedsosYt] = useState('');
+  const [medsosTk, setMedsosTk] = useState('');
   const [profileSaving, setProfileSaving] = useState(false);
 
   const [personalia, setPersonalia] = useState<Personalia[]>([]);
@@ -68,6 +71,7 @@ export default function PortalDkr() {
   const [newPersonJabatan, setNewPersonJabatan] = useState('');
   const [newPersonGolongan, setNewPersonGolongan] = useState<'penegak' | 'pandega' | 'pembina' | 'lainnya'>('penegak');
   const [newPersonFoto, setNewPersonFoto] = useState('');
+  const [editingPersonaliaId, setEditingPersonaliaId] = useState<string | null>(null);
 
   // Tagihan Cabang states
   const [tagihanCabangList, setTagihanCabangList] = useState<any[]>([]);
@@ -151,6 +155,9 @@ export default function PortalDkr() {
       if (resData.profile) {
         setDeskripsi(resData.profile.deskripsi || '');
         setLogoUrl(resData.profile.logo_url || '');
+        setMedsosIg(resData.profile.medsos_ig || '');
+        setMedsosYt(resData.profile.medsos_yt || '');
+        setMedsosTk(resData.profile.medsos_tk || '');
       }
 
       if (resData.data_potensial) {
@@ -395,7 +402,10 @@ export default function PortalDkr() {
         body: JSON.stringify({
           kecamatan_id: kecamatan.id,
           deskripsi,
-          logo_url: logoUrl
+          logo_url: logoUrl,
+          medsos_ig: medsosIg,
+          medsos_yt: medsosYt,
+          medsos_tk: medsosTk
         })
       });
       if (res.ok) {
@@ -589,6 +599,45 @@ export default function PortalDkr() {
         setNewPersonFoto('');
         alert('Struktur personalia berhasil diperbarui!');
         loadDkrData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Edit personalia
+  const handleEditPersonalia = (p: Personalia) => {
+    setEditingPersonaliaId(p.id);
+    setNewPersonNama(p.nama);
+    setNewPersonJabatan(p.jabatan);
+    setNewPersonGolongan(p.golongan);
+    setNewPersonFoto(p.foto_url || '');
+  };
+
+  const handleUpdatePersonalia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPersonaliaId || !newPersonNama || !newPersonJabatan) return;
+    try {
+      const res = await fetch('/api/personalia/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingPersonaliaId,
+          nama: newPersonNama,
+          jabatan: newPersonJabatan,
+          golongan: newPersonGolongan,
+          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
+        })
+      });
+      if (res.ok) {
+        setEditingPersonaliaId(null);
+        setNewPersonNama('');
+        setNewPersonJabatan('');
+        setNewPersonFoto('');
+        alert('Data personalia berhasil diperbarui!');
+        loadDkrData();
+      } else {
+        alert('Gagal memperbarui data personalia.');
       }
     } catch (e) {
       console.error(e);
@@ -996,6 +1045,40 @@ export default function PortalDkr() {
                   <div className="md:border-l md:pl-6 space-y-1 text-xs text-gray-500">
                     <p className="font-bold text-brand-brown-dark">Tampilan Publik:</p>
                     <p>Logo ini akan menghias halaman detail profil DKR {kecamatan?.nama_kecamatan} dan memberikan identitas visual khas bagi ranting Anda.</p>
+                  </div>
+                </div>
+
+                {/* Medsos Links */}
+                <div className="bg-gradient-to-br from-pink-50 to-purple-50 border border-pink-100 rounded-2xl p-5 space-y-4">
+                  <h4 className="font-extrabold text-xs text-brand-brown-dark uppercase tracking-wider flex items-center gap-2">
+                    <span>📱</span> Link Media Sosial DKR
+                  </h4>
+                  <p className="text-[10px] text-gray-500 font-mono">Link ini akan tampil di halaman publik DKR. Masukkan URL lengkap.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-pink-500 uppercase mb-1">📷 Instagram URL</label>
+                      <input
+                        type="url" value={medsosIg} onChange={(e) => setMedsosIg(e.target.value)}
+                        placeholder="https://instagram.com/akun"
+                        className="w-full bg-white border border-pink-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-pink-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-red-500 uppercase mb-1">▶️ YouTube URL</label>
+                      <input
+                        type="url" value={medsosYt} onChange={(e) => setMedsosYt(e.target.value)}
+                        placeholder="https://youtube.com/@akun"
+                        className="w-full bg-white border border-red-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-red-400 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">🎵 TikTok URL</label>
+                      <input
+                        type="url" value={medsosTk} onChange={(e) => setMedsosTk(e.target.value)}
+                        placeholder="https://tiktok.com/@akun"
+                        className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-gray-400 transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1503,11 +1586,19 @@ export default function PortalDkr() {
               
               {/* Add form */}
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-5">
-                <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-orange pb-2">
-                  Tambah Personil DKR
-                </h3>
+                <div className="flex items-center justify-between border-b-2 border-brand-orange pb-2">
+                  <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight">
+                    {editingPersonaliaId ? '✏️ Edit Personil DKR' : 'Tambah Personil DKR'}
+                  </h3>
+                  {editingPersonaliaId && (
+                    <button type="button" onClick={() => { setEditingPersonaliaId(null); setNewPersonNama(''); setNewPersonJabatan(''); setNewPersonFoto(''); }}
+                      className="text-[10px] font-bold text-gray-400 hover:text-brand-red uppercase font-mono cursor-pointer">
+                      ✕ Batal
+                    </button>
+                  )}
+                </div>
 
-                <form onSubmit={handleAddPersonalia} className="space-y-4 text-xs font-mono">
+                <form onSubmit={editingPersonaliaId ? handleUpdatePersonalia : handleAddPersonalia} className="space-y-4 text-xs font-mono">
                   <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nama Pengurus</label>
                     <input 
@@ -1547,9 +1638,9 @@ export default function PortalDkr() {
 
                   <button
                     type="submit"
-                    className="w-full bg-brand-green hover:bg-brand-green/95 text-white font-extrabold text-xs py-3 rounded-xl uppercase shadow"
+                    className="w-full bg-brand-green hover:bg-brand-green/95 text-white font-extrabold text-xs py-3 rounded-xl uppercase shadow cursor-pointer"
                   >
-                    Tambahkan Pengurus
+                    {editingPersonaliaId ? 'Simpan Perubahan' : 'Tambahkan Pengurus'}
                   </button>
                 </form>
               </div>
@@ -1572,12 +1663,20 @@ export default function PortalDkr() {
                           <span className="text-[10px] text-gray-400 mt-1 block">{p.jabatan} • {p.golongan}</span>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => handleDeletePersonalia(p.id)}
-                        className="text-brand-red font-bold text-[10px] ml-4"
-                      >
-                        Hapus
-                      </button>
+                      <div className="flex items-center gap-3 ml-4">
+                        <button
+                          onClick={() => handleEditPersonalia(p)}
+                          className="text-brand-teal font-bold text-[10px] hover:underline cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeletePersonalia(p.id)}
+                          className="text-brand-red font-bold text-[10px] hover:underline cursor-pointer"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

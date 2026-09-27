@@ -62,6 +62,9 @@ create table if not exists dkr_profile (
   kecamatan_id text not null unique references kecamatan(id) on delete cascade,
   deskripsi text,
   logo_url text,
+  medsos_ig text,
+  medsos_yt text,
+  medsos_tk text,
   updated_at timestamptz not null default now()
 );
 

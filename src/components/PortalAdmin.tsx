@@ -2757,7 +2757,7 @@ export default function PortalAdmin() {
                     disabled={personaliaSaving}
                     className="w-full bg-brand-green hover:bg-brand-green/95 text-white font-extrabold text-xs py-3 rounded-xl uppercase shadow disabled:opacity-60 cursor-pointer"
                   >
-                    {personaliaSaving ? 'Menyimpan...' : 'Tambahkan Pengurus'}
+                    {personaliaSaving ? 'Menyimpan...' : (editingPersonaliaId ? 'Simpan Perubahan' : 'Tambahkan Pengurus')}
                   </button>
                 </form>
               </div>

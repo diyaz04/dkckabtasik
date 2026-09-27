@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-d
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LandingPage from './components/LandingPage';
+import InformasiPage from './components/InformasiPage';
 import NewsDetailPage from './components/NewsDetailPage';
 import DkrDetailPage from './components/DkrDetailPage';
 import SakaDetailPage from './components/SakaDetailPage';
@@ -83,6 +84,15 @@ export default function App() {
           element={
             <PublicLayout>
               <SakaDetailPage />
+            </PublicLayout>
+          } 
+        />
+
+        <Route 
+          path="/informasi" 
+          element={
+            <PublicLayout>
+              <InformasiPage />
             </PublicLayout>
           } 
         />

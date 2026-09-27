@@ -1,6 +1,36 @@
 import { Compass, Mail, Phone, MapPin, Youtube, Instagram, Award } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 export default function Footer() {
+  const [medsosIg, setMedsosIg] = useState('https://instagram.com');
+  const [medsosYt, setMedsosYt] = useState('https://youtube.com');
+  const [medsosTk, setMedsosTk] = useState('https://tiktok.com');
+
+  useEffect(() => {
+    fetch('/api/site_content')
+      .then(r => r.json())
+      .then((sc: any[]) => {
+        const medsos = sc.find(item => item.section_key === 'medsos_dkc');
+        if (medsos && medsos.content) {
+          if (medsos.content.instagram) setMedsosIg(medsos.content.instagram);
+          if (medsos.content.youtube) setMedsosYt(medsos.content.youtube);
+          if (medsos.content.tiktok) setMedsosTk(medsos.content.tiktok);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Extract username/handle from URL for display
+  const getHandle = (url: string) => {
+    try {
+      const u = new URL(url);
+      const parts = u.pathname.split('/').filter(Boolean);
+      return parts.length > 0 ? '@' + parts[parts.length - 1].replace('@', '') : url;
+    } catch {
+      return url;
+    }
+  };
+
   return (
     <footer className="bg-brand-brown-dark text-gray-200 border-t-8 border-brand-green pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -56,51 +86,51 @@ export default function Footer() {
             Media Sosial Resmi
           </h4>
           <p className="text-sm text-gray-300 leading-relaxed mb-6">
-            Ikuti perjalanan, publikasi, dan siaran kegiatan Pramuka Penegak & Pandega Kabupaten Tasikmalaya di platform kami.
+            Ikuti perjalanan, publikasi, dan siaran kegiatan Pramuka Penegak &amp; Pandega Kabupaten Tasikmalaya di platform kami.
           </p>
           
           <div className="grid grid-cols-1 gap-3 font-mono text-xs">
             {/* Instagram */}
             <a 
-              href="https://instagram.com" 
+              href={medsosIg}
               target="_blank" 
               rel="noopener noreferrer" 
-              className="flex items-center space-x-3 bg-[#4c352a] hover:bg-brand-orange hover:text-brand-brown-dark p-3 rounded-xl transition-all"
+              className="flex items-center space-x-3 bg-[#4c352a] hover:bg-brand-orange hover:text-brand-brown-dark p-3 rounded-xl transition-all group"
             >
               <Instagram className="w-5 h-5 text-[#E1306C] group-hover:text-inherit" />
               <div>
-                <span className="font-bold block text-white text-xs">Instagram</span>
-                <span className="text-[10px] text-gray-300">@dkctasikmalaya</span>
+                <span className="font-bold block text-white text-xs group-hover:text-inherit">Instagram</span>
+                <span className="text-[10px] text-gray-300 group-hover:text-inherit">{getHandle(medsosIg)}</span>
               </div>
             </a>
 
             {/* Youtube */}
             <a 
-              href="https://youtube.com" 
+              href={medsosYt}
               target="_blank" 
               rel="noopener noreferrer" 
-              className="flex items-center space-x-3 bg-[#4c352a] hover:bg-brand-red hover:text-white p-3 rounded-xl transition-all"
+              className="flex items-center space-x-3 bg-[#4c352a] hover:bg-red-600 hover:text-white p-3 rounded-xl transition-all group"
             >
               <Youtube className="w-5 h-5 text-[#FF0000]" />
               <div>
                 <span className="font-bold block text-white text-xs">YouTube</span>
-                <span className="text-[10px] text-gray-300">DKC TV Tasikmalaya</span>
+                <span className="text-[10px] text-gray-300">{getHandle(medsosYt)}</span>
               </div>
             </a>
 
             {/* TikTok */}
             <a 
-              href="https://tiktok.com" 
+              href={medsosTk}
               target="_blank" 
               rel="noopener noreferrer" 
-              className="flex items-center space-x-3 bg-[#4c352a] hover:bg-black hover:text-white p-3 rounded-xl transition-all"
+              className="flex items-center space-x-3 bg-[#4c352a] hover:bg-black hover:text-white p-3 rounded-xl transition-all group"
             >
               <svg className="w-5 h-5 text-teal-400" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.01 1.62 4.14 1.13 1.14 2.66 1.77 4.23 1.8v3.96c-1.63-.02-3.21-.57-4.52-1.57-.46-.35-.86-.76-1.19-1.22-.05 2.12-.01 4.24-.03 6.36-.09 2.53-1.02 4.99-2.78 6.78-2.22 2.13-5.56 2.82-8.48 1.76-2.58-.93-4.66-3.15-5.38-5.78C-.7 12.83 1.16 9.07 4.35 7.63c1.78-.79 3.86-.77 5.62.11V11.8c-.89-.48-1.92-.62-2.92-.38-1.54.34-2.73 1.69-2.9 3.26-.22 1.62.63 3.23 2.1 3.84 1.48.61 3.29.13 4.19-1.18.51-.71.74-1.59.73-2.46-.01-4.96-.01-9.92-.01-14.88z" />
               </svg>
               <div>
                 <span className="font-bold block text-white text-xs">TikTok</span>
-                <span className="text-[10px] text-gray-300">@dkctasik</span>
+                <span className="text-[10px] text-gray-300">{getHandle(medsosTk)}</span>
               </div>
             </a>
           </div>

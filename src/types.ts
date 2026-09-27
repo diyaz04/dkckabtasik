@@ -41,6 +41,9 @@ export interface DkrProfile {
   kecamatan_id: string;
   deskripsi: string;
   logo_url?: string;
+  medsos_ig?: string;
+  medsos_yt?: string;
+  medsos_tk?: string;
   updated_at: string;
 }
 

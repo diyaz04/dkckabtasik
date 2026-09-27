@@ -366,6 +366,17 @@ app.post('/api/personalia/save', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/personalia/update', async (req: Request, res: Response) => {
+  try {
+    const { id, nama, jabatan, golongan, foto_url } = req.body;
+    if (!id) return res.status(400).json({ error: 'ID wajib diisi' });
+    await supabaseAdmin.from('personalia').update({ nama, jabatan, golongan, foto_url }).eq('id', id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/personalia/delete', async (req: Request, res: Response) => {
   try {
     const { id } = req.body;
