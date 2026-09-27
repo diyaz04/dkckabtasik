@@ -2583,6 +2583,50 @@ export default function PortalAdmin() {
             ) : (
               <div className="space-y-6 relative">
               
+              {/* Wilayah Config Modal */}
+              {isWilayahConfigModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-10 pb-20 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                  <div className="bg-white rounded-3xl p-6 shadow-2xl space-y-5 relative max-w-4xl w-full my-8">
+                    <button type="button" onClick={() => setIsWilayahConfigModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100 transition-colors z-10">
+                      <X className="w-5 h-5" />
+                    </button>
+                    <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-orange pb-2">
+                      Konfigurasi Wilayah Kwarran
+                    </h3>
+                    <form onSubmit={handleSaveWilayah} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+                        {tempWilayahData.map((w, idx) => (
+                          <div key={w.id} className="bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center">
+                            <span className="text-xs font-bold text-gray-700">{w.nama_kecamatan}</span>
+                            <select
+                              value={w.wilayah}
+                              onChange={(e) => {
+                                const newW = [...tempWilayahData];
+                                newW[idx].wilayah = e.target.value;
+                                setTempWilayahData(newW);
+                              }}
+                              className="text-[10px] bg-white border border-gray-200 rounded p-1 ml-2 font-mono"
+                            >
+                              <option value="">- Pilih -</option>
+                              <option value="Utara">Utara</option>
+                              <option value="Selatan">Selatan</option>
+                              <option value="Timur">Timur</option>
+                              <option value="Barat">Barat</option>
+                              <option value="Tengah">Tengah</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end pt-4 border-t border-slate-100">
+                         <button type="submit" disabled={wilayahSaving} className="bg-brand-green hover:bg-brand-green/90 text-white font-extrabold text-xs px-6 py-3 rounded-xl cursor-pointer">
+                           {wilayahSaving ? 'Menyimpan...' : 'Simpan Semua'}
+                         </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
               {/* Left Form: Add Agenda */}
               {isAddAgendaModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-start justify-center p-4 pt-10 pb-20 bg-black/60 backdrop-blur-sm overflow-y-auto">
@@ -2744,9 +2788,18 @@ export default function PortalAdmin() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-extrabold text-xl text-brand-brown-dark tracking-tight">Daftar Agenda Kegiatan & Aktivitas</h3>
+                  <div className="flex gap-2">
+                    <button onClick={() => {
+                        setTempWilayahData(kecamatanList.map(k => ({ id: k.id, nama_kecamatan: k.nama_kecamatan, wilayah: k.wilayah || '' })));
+                        setIsWilayahConfigModalOpen(true);
+                      }} 
+                      className="bg-brand-orange hover:bg-brand-orange/90 text-brand-brown-dark font-extrabold text-xs px-5 py-2.5 rounded-xl uppercase flex items-center gap-2 cursor-pointer shadow">
+                      <Settings className="w-4 h-4" /> Config Wilayah Kwarran
+                    </button>
                   <button onClick={() => setIsAddAgendaModalOpen(true)} className="bg-brand-brown-dark hover:bg-brand-brown-dark/95 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl uppercase flex items-center gap-2 cursor-pointer shadow">
                     <Plus className="w-4 h-4" /> Tambah Kegiatan
                   </button>
+                  </div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
 
