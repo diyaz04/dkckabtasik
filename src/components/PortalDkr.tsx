@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, Bell, Menu, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
   Award, FileSpreadsheet, Edit3, Clock, ClipboardList, Printer, ChevronRight, ChevronLeft, AlertCircle, Copy
-, PanelLeft } from 'lucide-react';
+, PanelLeft, Lock } from 'lucide-react';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
   Pangkalan, DataPotensial, DkrProfile, LaporanKegiatan
