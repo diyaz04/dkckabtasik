@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, ShieldAlert, Compass, ChevronDown, Users, Trophy, Tent, Newspaper, CalendarDays, FolderDown, MapPinned, IdCard } from 'lucide-react';
 
