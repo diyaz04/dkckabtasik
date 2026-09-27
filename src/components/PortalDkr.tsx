@@ -12,7 +12,7 @@ import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/i
 
 import LaporanFormGenerator from './LaporanFormGenerator';
 import LaporanPdfTemplate from './LaporanPdfTemplate';
-import html2pdf from 'html2pdf.js';
+// html2pdf loaded dynamically
 import GreetingBanner from './GreetingBanner';
 
 export default function PortalDkr() {
@@ -269,7 +269,9 @@ export default function PortalDkr() {
     }
   };
 
-  const handleDownloadPdf = (laporan: LaporanKegiatan) => {
+  const handleDownloadPdf = async (laporan: LaporanKegiatan) => {
+    // @ts-ignore
+    const html2pdf = (await import('html2pdf.js')).default;
     const element = document.getElementById(`pdf-laporan-${laporan.id}`);
     if (!element) {
       alert("Template PDF belum dimuat.");

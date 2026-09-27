@@ -5,7 +5,7 @@ import {
   MapPin, CheckCircle2, ChevronDown, Download, Eye, AlertCircle,
   Heart, Share2, X, Copy, Check
 } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
+// html2pdf loaded dynamically
 import * as XLSX from 'xlsx';
 import BuktiPendaftaranPdfTemplate from './BuktiPendaftaranPdfTemplate';
 import { motion, AnimatePresence, useScroll, useVelocity, useTransform, useSpring, useMotionValue, useAnimationFrame } from 'motion/react';
@@ -461,7 +461,9 @@ export default function LandingPage() {
     }
   };
 
-  const handleDownloadBuktiPendaftaran = () => {
+  const handleDownloadBuktiPendaftaran = async () => {
+    // @ts-ignore
+    const html2pdf = (await import('html2pdf.js')).default;
     const element = document.getElementById('pdf-bukti-pendaftaran');
     if (!element) return;
     
