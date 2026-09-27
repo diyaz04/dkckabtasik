@@ -315,7 +315,7 @@ export default function NewsDetailPage() {
                   {/* Featured Image */}
                   <div className="relative h-40 w-full overflow-hidden bg-slate-100 rounded-xl border border-slate-150/60 shadow-inner">
                     <img 
-                      src={berita.gambar_url} 
+                      src={berita.gambar_url ? berita.gambar_url + (berita.gambar_url.includes('?') ? '&' : '?') + 'cors=' + Date.now() : ''} 
                       alt={berita.judul}
                       crossOrigin="anonymous"
                       className="w-full h-full object-cover"
