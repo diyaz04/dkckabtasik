@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, User, ArrowLeft, Tag, Share2, Heart, X, Copy, Check, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Berita } from '../types';
+import QRCode from 'react-qr-code';
 
 export default function NewsDetailPage() {
   const { slug } = useParams();
@@ -362,11 +363,7 @@ export default function NewsDetailPage() {
                     {/* QR Code */}
                     <div className="col-span-4 flex flex-col items-center">
                       <div className="bg-white p-1 rounded-lg border border-slate-200/80 shadow-sm">
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`}
-                          alt="QR Code Link"
-                          className="w-12 h-12"
-                        />
+                        <QRCode value={window.location.href} size={48} />
                       </div>
                       <span className="text-[6px] font-mono font-bold text-gray-400 text-center tracking-wider block mt-1 uppercase leading-none">
                         PINDAI LINK

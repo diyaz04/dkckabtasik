@@ -1,3 +1,4 @@
+import QRCode from 'react-qr-code';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -2155,11 +2156,7 @@ export default function LandingPage() {
                     {/* Right: Beautiful QR Code frame */}
                     <div className="col-span-4 flex flex-col items-center">
                       <div className="bg-white p-1 rounded-lg border border-slate-200/80 shadow-sm">
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/berita/' + shareNews.slug)}`}
-                          alt="QR Code Link"
-                          className="w-12 h-12"
-                        />
+                        <QRCode value={window.location.origin + "/berita/" + shareNews.slug} size={48} />
                       </div>
                       <span className="text-[6px] font-mono font-bold text-gray-400 text-center tracking-wider block mt-1 uppercase leading-none">
                         PINDAI LINK
