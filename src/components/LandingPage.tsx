@@ -101,6 +101,172 @@ function OverlappingSection({ children, id, className = "", isFirst = false }: O
   );
 }
 
+
+import { Megaphone, X, Clock, CalendarDays, ExternalLink, ArrowRight } from 'lucide-react';
+
+const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: { beritaList: any[], agendaList: any[], themeColors: any, setKegiatanSubTab: any }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  const recentBerita = useMemo(() => {
+    return beritaList.filter(b => {
+      if (b.status !== 'published') return false;
+      const diffTime = new Date().getTime() - new Date(b.created_at).getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24); 
+      return diffDays <= 7;
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [beritaList]);
+
+  const activeAgendas = useMemo(() => {
+    return agendaList.filter(a => a.status_publikasi && a.is_aktif_pendaftaran);
+  }, [agendaList]);
+
+  const [activeTab, setActiveTab] = useState<'kegiatan' | 'berita'>(activeAgendas.length > 0 ? 'kegiatan' : 'berita');
+
+  useEffect(() => {
+    if (activeAgendas.length > 0) setActiveTab('kegiatan');
+    else if (recentBerita.length > 0) setActiveTab('berita');
+  }, [activeAgendas.length, recentBerita.length]);
+
+  useEffect(() => {
+    const hasSeen = sessionStorage.getItem('hasSeenPromoPopup');
+    if ((recentBerita.length > 0 || activeAgendas.length > 0) && !hasSeen) {
+      const timer = setTimeout(() => setIsVisible(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [recentBerita.length, activeAgendas.length]);
+
+  const handleClose = () => {
+    setIsVisible(false);
+    sessionStorage.setItem('hasSeenPromoPopup', 'true');
+  };
+
+  const calculateCountdown = (targetDateStr: string) => {
+    const target = new Date(targetDateStr).getTime();
+    const now = new Date().getTime();
+    const diff = target - now;
+    if (diff <= 0) return 'Hari ini!';
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    return `${days} Hari ${hours} Jam lagi`;
+  };
+
+  if (!isVisible || (recentBerita.length === 0 && activeAgendas.length === 0)) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose}></div>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+      >
+        {/* Header */}
+        <div 
+          className="px-6 py-4 flex items-center justify-between text-white"
+          style={{ backgroundColor: themeColors.brandBrownDark }}
+        >
+          <div className="flex items-center gap-2 font-display font-extrabold text-lg">
+            <Megaphone className="w-5 h-5 text-brand-orange" />
+            Informasi & Pembaruan
+          </div>
+          <button onClick={handleClose} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        {(recentBerita.length > 0 && activeAgendas.length > 0) && (
+          <div className="flex border-b border-gray-100">
+            <button
+              onClick={() => setActiveTab('kegiatan')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'kegiatan' ? 'text-brand-orange border-b-2 border-brand-orange bg-brand-orange/5' : 'text-gray-400 hover:bg-gray-50'}`}
+            >
+              Kegiatan Aktif ({activeAgendas.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('berita')}
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'berita' ? 'text-brand-orange border-b-2 border-brand-orange bg-brand-orange/5' : 'text-gray-400 hover:bg-gray-50'}`}
+            >
+              Berita Baru ({recentBerita.length})
+            </button>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="overflow-y-auto p-6 bg-gray-50 flex-1 space-y-4 custom-scrollbar">
+          {activeTab === 'kegiatan' && activeAgendas.map(agenda => (
+            <div key={agenda.id} className="bg-white rounded-2xl p-5 border border-brand-orange/30 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-brand-orange/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-500"></div>
+              
+              <div className="flex items-start justify-between relative z-10">
+                <div className="space-y-1">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white uppercase tracking-wider bg-brand-orange px-2 py-1 rounded-lg">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    Pendaftaran Aktif
+                  </span>
+                  <h3 className="font-display font-extrabold text-brand-brown-dark text-lg leading-tight mt-2">
+                    {agenda.nama_kegiatan}
+                  </h3>
+                </div>
+              </div>
+              
+              <div className="mt-4 space-y-2 relative z-10">
+                <div className="flex items-center gap-2 text-xs font-mono text-gray-600 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                  <Clock className="w-4 h-4 text-brand-teal" />
+                  <span>Sisa Waktu: <strong className="text-brand-brown-dark">{calculateCountdown(agenda.tanggal_mulai)}</strong></span>
+                </div>
+                
+                <p className="text-xs text-gray-500 font-mono leading-relaxed mt-2">
+                  Ayo segera daftarkan diri dan jadilah bagian dari kegiatan seru ini sebelum kuota terpenuhi atau pendaftaran ditutup!
+                </p>
+                
+                <a 
+                  href={`#/#form-pendaftaran`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleClose();
+                    // Scroll to pendaftaran section
+                    const el = document.getElementById('form-pendaftaran');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    setKegiatanSubTab('registration');
+                    const el2 = document.getElementById('kegiatan');
+                    if (el2) el2.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="mt-4 w-full bg-brand-green hover:bg-[#3d8c40] text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 uppercase tracking-wide transition-all shadow-md shadow-brand-green/20"
+                >
+                  Daftar Sekarang <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          ))}
+
+          {activeTab === 'berita' && recentBerita.map(berita => (
+            <div key={berita.id} className="bg-white rounded-2xl p-3 border border-gray-100 flex gap-4 items-center group shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
+                <img src={berita.foto_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&q=80&w=400'} alt={berita.judul} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[9px] font-bold text-brand-orange uppercase tracking-wider">Baru Diunggah!</span>
+                <h4 className="font-extrabold text-brand-brown-dark text-sm leading-tight mt-1 line-clamp-2">
+                  {berita.judul}
+                </h4>
+                <a 
+                  href={`/#/news/${berita.slug}`}
+                  onClick={handleClose}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-green mt-2 hover:underline uppercase"
+                >
+                  Baca Selengkapnya <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 export default function LandingPage() {
   // DB States
   const [kecamatanList, setKecamatanList] = useState<Kecamatan[]>([]);
