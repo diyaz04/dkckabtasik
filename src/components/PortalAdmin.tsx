@@ -253,6 +253,32 @@ export default function PortalAdmin() {
     }
   };
 
+  // Download PDF Laporan (Admin view)
+  const handleDownloadPdf = async (laporan: LaporanKegiatan) => {
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const element = document.getElementById(`pdf-laporan-${laporan.id}`);
+      if (!element) {
+        alert("Template PDF belum dimuat.");
+        return;
+      }
+      element.style.display = 'block';
+      const opt = {
+        margin:       10,
+        filename:     `Laporan_${laporan.jenis_dokumen}_${laporan.nama_kegiatan.replace(/\s+/g, '_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.style.display = 'none';
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Gagal mengunduh PDF");
+    }
+  };
+
   // Process / Approve / Reject Laporan Kegiatan
   const handleProcessLaporan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -3839,19 +3865,33 @@ export default function PortalAdmin() {
                                 )}
 
                                 <div className="flex items-center justify-between gap-4 flex-wrap pt-2">
-                                  <div>
-                                    {lap.file_laporan_url ? (
+                                  <div className="flex items-center gap-2">
+                                    {lap.form_data && (
+                                      <button
+                                        onClick={() => handleDownloadPdf(lap)}
+                                        className="bg-brand-orange hover:bg-brand-orange/90 text-brand-brown-dark font-extrabold text-[10px] px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5 uppercase transition-all cursor-pointer"
+                                      >
+                                        <FileText className="w-4 h-4" /> Download PDF Laporan
+                                      </button>
+                                    )}
+                                    {lap.file_laporan_url && (
                                       <a
                                         href={lap.file_laporan_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="bg-[#0E9F6E]/10 hover:bg-[#0E9F6E]/20 text-[#0E9F6E] font-bold text-[10px] px-4 py-2.5 rounded-xl inline-flex items-center gap-1.5 uppercase transition-all"
                                       >
-                                        📂 Unduh / Lihat Berkas Laporan Kwarran
+                                        📂 Lampiran Manual
                                       </a>
-                                    ) : (
-                                      <span className="text-xs text-gray-400 italic font-mono">Tidak ada berkas lampiran</span>
                                     )}
+                                    {!lap.form_data && !lap.file_laporan_url && (
+                                      <span className="text-xs text-gray-400 italic font-mono">Tidak ada laporan / lampiran</span>
+                                    )}
+                                  </div>
+
+                                  {/* Hidden PDF Template Container */}
+                                  <div style={{ display: 'none' }}>
+                                    <LaporanPdfTemplate laporan={lap} profileDkr={undefined} />
                                   </div>
 
                                   <div>
