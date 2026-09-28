@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showAlert as alert, showConfirm } from '../utils/dialog';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, Bell, Menu, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
@@ -469,7 +470,7 @@ export default function PortalDkr() {
 
   // Delete Pangkalan
   const handleDeletePangkalan = async (id: string) => {
-    if (!confirm('Hapus pangkalan ini?')) return;
+    if (!await showConfirm('Hapus pangkalan ini?')) return;
     try {
       const res = await fetch('/api/pangkalan/delete', {
         method: 'POST',
@@ -529,7 +530,7 @@ export default function PortalDkr() {
 
   // Delete Berita local
   const handleDeleteBerita = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus warta kontribusi ini?')) return;
+    if (!await showConfirm('Apakah Anda yakin ingin menghapus warta kontribusi ini?')) return;
     try {
       const res = await fetch('/api/berita/delete', {
         method: 'POST',
@@ -583,7 +584,7 @@ export default function PortalDkr() {
 
   // Delete local agenda
   const handleDeleteLocalAgenda = async (id: string) => {
-    if (!confirm('Hapus agenda kegiatan lokal ini?')) return;
+    if (!await showConfirm('Hapus agenda kegiatan lokal ini?')) return;
     try {
       const res = await fetch('/api/agenda/delete', {
         method: 'POST',
@@ -670,7 +671,7 @@ export default function PortalDkr() {
 
   // Delete personalia
   const handleDeletePersonalia = async (id: string) => {
-    if (!confirm('Hapus pengurus ini dari struktur DKR?')) return;
+    if (!await showConfirm('Hapus pengurus ini dari struktur DKR?')) return;
     try {
       const res = await fetch('/api/personalia/delete', {
         method: 'POST',

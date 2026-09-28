@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { downloadPamflet } from '../utils/pamflet';
+import { showAlert as alert } from '../utils/dialog';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Calendar, User, ArrowLeft, Tag, Share2, Heart, X, Copy, Check, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -82,24 +84,12 @@ export default function NewsDetailPage() {
 
   const handleDownloadPamflet = async () => {
     if (!berita) return;
-    const element = document.getElementById('pamflet-render-target');
-    if (!element) return;
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(element, {
-        useCORS: true,
-        scale: 2.5,
-        backgroundColor: '#ffffff',
-        logging: false
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `pamflet-${berita.slug}.png`;
-      link.href = imgData;
-      link.click();
+      await downloadPamflet('pamflet-render-target', `pamflet-${berita.slug}.png`);
+      alert('Pamflet berhasil diunduh!');
     } catch (err) {
       console.error("Error generating pamphlet:", err);
-      alert("Gagal mengunduh pamflet. Silakan salin tautan manual.");
+      alert("Gagal mengunduh pamflet. Silakan coba lagi atau salin tautan manual.");
     }
   };
 
@@ -171,7 +161,7 @@ export default function NewsDetailPage() {
               alt={berita.judul}
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800';
+                const el = e.target as HTMLImageElement; if (!el.dataset.fallback) { el.dataset.fallback = '1'; el.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'; }
               }}
             />
             {/* Absolute badge */}
@@ -315,12 +305,12 @@ export default function NewsDetailPage() {
                   {/* Featured Image */}
                   <div className="relative h-40 w-full overflow-hidden bg-slate-100 rounded-xl border border-slate-150/60 shadow-inner">
                     <img 
-                      src={berita.gambar_url ? berita.gambar_url + (berita.gambar_url.includes('?') ? '&' : '?') + 'cors=' + Date.now() : ''} 
+                      src={berita.gambar_url || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'} 
                       alt={berita.judul}
                       crossOrigin="anonymous"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800';
+                        const el = e.target as HTMLImageElement; if (!el.dataset.fallback) { el.dataset.fallback = '1'; el.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'; }
                       }}
                     />
                   </div>

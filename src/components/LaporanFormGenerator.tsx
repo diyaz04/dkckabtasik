@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { showAlert as alert } from '../utils/dialog';
 import { Upload, X, ChevronRight, ChevronLeft, Save } from 'lucide-react';
 import { compressAndUploadFile } from '../utils/imageUpload';
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { showAlert as alert, showConfirm } from '../utils/dialog';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Shield 
@@ -234,7 +235,7 @@ export default function PortalSaka() {
   };
 
   const handleDeletePangkalan = async (id: string) => {
-    if (!confirm('Hapus Krida / Pangkalan ini?')) return;
+    if (!await showConfirm('Hapus Krida / Pangkalan ini?')) return;
     try {
       const res = await fetch('/api/pangkalan/delete', {
         method: 'POST',
@@ -286,7 +287,7 @@ export default function PortalSaka() {
   };
 
   const handleDeleteBerita = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus warta kontribusi ini?')) return;
+    if (!await showConfirm('Apakah Anda yakin ingin menghapus warta kontribusi ini?')) return;
     try {
       const res = await fetch('/api/berita/delete', {
         method: 'POST',
@@ -338,7 +339,7 @@ export default function PortalSaka() {
   };
 
   const handleDeleteLocalAgenda = async (id: string) => {
-    if (!confirm('Hapus agenda kegiatan lokal ini?')) return;
+    if (!await showConfirm('Hapus agenda kegiatan lokal ini?')) return;
     try {
       const res = await fetch('/api/agenda/delete', {
         method: 'POST',
@@ -385,7 +386,7 @@ export default function PortalSaka() {
   };
 
   const handleDeletePersonalia = async (id: string) => {
-    if (!confirm('Hapus personalia pengurus ini?')) return;
+    if (!await showConfirm('Hapus personalia pengurus ini?')) return;
     try {
       const res = await fetch('/api/personalia/delete', {
         method: 'POST',

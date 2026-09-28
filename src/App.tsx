@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import DialogHost from './components/DialogHost';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -49,6 +50,7 @@ export default function App() {
   return (
     <Router>
       <ScrollToTop />
+      <DialogHost />
       <Routes>
         
         {/* Public Routes */}

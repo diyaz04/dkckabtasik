@@ -1,4 +1,5 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
+import { showAlert as alert, showConfirm } from '../utils/dialog';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -432,7 +433,7 @@ export default function PortalAdmin() {
   };
 
   const handleDeleteBerita = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus berita ini?')) return;
+    if (!await showConfirm('Apakah Anda yakin ingin menghapus berita ini?')) return;
     try {
       const res = await fetch('/api/berita/delete', {
         method: 'POST',
@@ -573,7 +574,7 @@ export default function PortalAdmin() {
   };
 
   const handleDeleteInformasi = async (id: string) => {
-    if (!confirm('Hapus berkas ini dari Pusat Unduhan Berkas?')) return;
+    if (!await showConfirm('Hapus berkas ini dari Pusat Unduhan Berkas?')) return;
     try {
       const res = await fetch('/api/informasi/delete', {
         method: 'POST',
@@ -622,7 +623,7 @@ export default function PortalAdmin() {
 
   // Delete Personalia DKC
   const handleDeletePersonalia = async (id: string) => {
-    if (!confirm('Hapus pengurus ini dari struktur DKC?')) return;
+    if (!await showConfirm('Hapus pengurus ini dari struktur DKC?')) return;
     try {
       const res = await fetch('/api/personalia/delete', {
         method: 'POST',
@@ -689,7 +690,7 @@ export default function PortalAdmin() {
 
   // Delete Agenda
   const handleDeleteAgenda = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus agenda kegiatan ini? Semua data pendaftaran terkait juga akan dihapus.')) return;
+    if (!await showConfirm('Apakah Anda yakin ingin menghapus agenda kegiatan ini? Semua data pendaftaran terkait juga akan dihapus.')) return;
     try {
       const res = await fetch('/api/agenda/delete', {
         method: 'POST',
@@ -848,7 +849,7 @@ export default function PortalAdmin() {
   };
 
   const handleMarkLunas = async (id: string) => {
-    if (!window.confirm('Yakin ingin menandai peserta ini sudah lunas?')) return;
+    if (!await showConfirm('Yakin ingin menandai peserta ini sudah lunas?')) return;
     try {
       const res = await fetch(`/api/pendaftaran/lunas/${id}`, { method: 'POST' });
       if (res.ok) {
@@ -1108,8 +1109,8 @@ export default function PortalAdmin() {
     reader.readAsDataURL(file);
   };
 
-  const handleResetTheme = () => {
-    if (confirm('Apakah Anda yakin ingin mengembalikan warna landing page ke setelan awal (oranye, hijau, & cokelat)?')) {
+  const handleResetTheme = async () => {
+    if (await showConfirm('Apakah Anda yakin ingin mengembalikan warna landing page ke setelan awal (oranye, hijau, & cokelat)?')) {
       setBrandOrange('#F5A623');
       setBrandGreen('#4CAF50');
       setBrandBrownDark('#5C4033');
@@ -2344,7 +2345,7 @@ export default function PortalAdmin() {
                                       <>
                                         <button 
                                           onClick={async () => {
-                                            if(!confirm('Setujui tagihan ini? (Pendaftar akan otomatis diset lunas)')) return;
+                                            if(!await showConfirm('Setujui tagihan ini? (Pendaftar akan otomatis diset lunas)')) return;
                                             try {
                                               const res = await fetch('/api/tagihan_kolektif/status', {
                                                 method: 'POST',

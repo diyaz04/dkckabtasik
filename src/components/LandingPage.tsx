@@ -1,4 +1,6 @@
 import QRCode from 'react-qr-code';
+import { downloadPamflet } from '../utils/pamflet';
+import { showAlert as alert } from '../utils/dialog';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -696,24 +698,12 @@ export default function LandingPage() {
 
   const handleDownloadPamflet = async () => {
     if (!shareNews) return;
-    const element = document.getElementById('pamflet-render-target');
-    if (!element) return;
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(element, {
-        useCORS: true,
-        scale: 2.5,
-        backgroundColor: '#ffffff',
-        logging: false
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `pamflet-${shareNews.slug}.png`;
-      link.href = imgData;
-      link.click();
+      await downloadPamflet('pamflet-render-target', `pamflet-${shareNews.slug}.png`);
+      alert('Pamflet berhasil diunduh!');
     } catch (err) {
       console.error("Error generating pamphlet:", err);
-      alert("Gagal mengunduh pamflet. Silakan salin tautan manual.");
+      alert("Gagal mengunduh pamflet. Silakan coba lagi atau salin tautan manual.");
     }
   };
 
@@ -1341,7 +1331,7 @@ export default function LandingPage() {
                         alt={b.judul}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-350"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800';
+                          const el = e.target as HTMLImageElement; if (!el.dataset.fallback) { el.dataset.fallback = '1'; el.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'; }
                         }}
                       />
                       {/* Source tag on top left */}
@@ -2269,12 +2259,12 @@ export default function LandingPage() {
                   {/* 2. Featured Image Container */}
                   <div className="relative h-40 w-full overflow-hidden bg-slate-100 rounded-xl border border-slate-150/60 shadow-inner">
                     <img 
-                      src={shareNews.gambar_url ? shareNews.gambar_url + (shareNews.gambar_url.includes('?') ? '&' : '?') + 'cors=' + Date.now() : ''} 
+                      src={shareNews.gambar_url || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'} 
                       alt={shareNews.judul}
                       crossOrigin="anonymous"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800';
+                        const el = e.target as HTMLImageElement; if (!el.dataset.fallback) { el.dataset.fallback = '1'; el.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'; }
                       }}
                     />
                   </div>
