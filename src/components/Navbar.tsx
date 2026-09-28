@@ -1,11 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type MouseEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, ShieldAlert, Compass, ChevronDown, Users, Trophy, Tent, Newspaper, CalendarDays, FolderDown, MapPinned, IdCard } from 'lucide-react';
+import { Menu, X, Compass, ChevronDown, Users, Trophy, Tent, Newspaper, CalendarDays, FolderDown, MapPinned, IdCard } from 'lucide-react';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Akses login tersembunyi: ketuk logo header 5x dengan cepat
+  const SECRET_TAPS = 5;
+  const SECRET_TAP_GAP_MS = 600; // jeda maksimal antar ketukan
+  const tapCount = useRef(0);
+  const lastTapAt = useRef(0);
+
+  const handleLogoTap = (e: MouseEvent) => {
+    const now = Date.now();
+    tapCount.current = now - lastTapAt.current <= SECRET_TAP_GAP_MS ? tapCount.current + 1 : 1;
+    lastTapAt.current = now;
+
+    if (tapCount.current >= SECRET_TAPS) {
+      e.preventDefault();
+      tapCount.current = 0;
+      setIsOpen(false);
+      navigate('/portal/login');
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('dkc_token');
@@ -48,7 +67,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo & Brand */}
-          <Link to="/#top" className="flex items-center space-x-3 group">
+          <Link to="/#top" onClick={handleLogoTap} className="flex items-center space-x-3 group select-none [touch-action:manipulation]">
             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-brand-orange overflow-hidden p-0.5 shadow-md group-hover:rotate-12 transition-transform">
               <img src="/logo.png" alt="Logo DKC" className="w-full h-full object-contain" />
             </div>
@@ -166,17 +185,7 @@ export default function Navbar() {
                   Keluar
                 </button>
               </div>
-            ) : (
-              <div className="border-l border-gray-200 pl-1.5 lg:pl-2">
-                <Link 
-                  to="/portal/login" 
-                  className="bg-brand-orange text-white font-bold text-[9px] lg:text-[10px] px-2 py-2 lg:px-4 lg:py-2.5 rounded-full shadow-md hover:bg-[#e0951b] transition-all flex items-center gap-1 uppercase tracking-wider whitespace-nowrap"
-                >
-                  <ShieldAlert className="w-3 lg:w-3.5 h-3 lg:h-3.5 text-white" />
-                  PORTAL
-                </Link>
-              </div>
-            )}
+            ) : null}
           </div>
 
           {/* Mobile menu button */}
@@ -304,15 +313,7 @@ export default function Navbar() {
                 Keluar
               </button>
             </div>
-          ) : (
-            <Link
-              to="/portal/login"
-              onClick={() => setIsOpen(false)}
-              className="block text-center bg-brand-orange text-white font-bold py-3 rounded-lg text-xs mt-3 uppercase tracking-wider shadow-sm"
-            >
-              MASUK PORTAL INTERNAL
-            </Link>
-          )}
+          ) : null}
         </div>
       )}
     </nav>
