@@ -208,3 +208,28 @@ export interface LaporanKegiatan {
   point_bobot?: number;
   created_at: string;
 }
+
+export type SuratJenis = 'permohonan_pemateri' | 'undangan' | 'permohonan_lainnya' | 'pemberitahuan' | 'lainnya';
+export type SuratStatus = 'terkirim' | 'dibaca' | 'diterima' | 'akan_hadir' | 'diwakilkan' | 'tidak_dapat_hadir' | 'ditolak' | 'selesai';
+
+export interface SuratDkr {
+  id: string;
+  kecamatan_id: string;
+  kecamatan_nama?: string;
+  jenis: SuratJenis;
+  nomor_surat?: string | null;
+  perihal: string;
+  tanggal_surat?: string | null;
+  tanggal_acara?: string | null;
+  keterangan?: string | null;
+  file_url: string;
+  file_nama?: string | null;
+  status: SuratStatus;
+  tanggapan?: string | null;
+  diwakili_oleh?: string | null;
+  dibaca_at?: string | null;
+  ditanggapi_at?: string | null;
+  dilihat_dkr: boolean;
+  created_at: string;
+  updated_at: string;
+}

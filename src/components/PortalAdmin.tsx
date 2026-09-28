@@ -1,5 +1,8 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
+import SuratAdminPanel from './SuratAdminPanel';
+import { useSuratDkr } from '../utils/suratDkr';
+import { Mail as MailIcon } from 'lucide-react';
 import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -21,8 +24,9 @@ import GreetingBanner from './GreetingBanner';
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi' | 'surat'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { list: suratList, reload: reloadSurat } = useSuratDkr('admin');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
@@ -1187,7 +1191,8 @@ export default function PortalAdmin() {
   
   const pendingLaporanCount = laporanList.filter(l => l.status === 'pending').length;
   const pendingBeritaCount = beritaList.filter(b => b.status === 'pending').length;
-  const totalNotifs = pendingLaporanCount + pendingBeritaCount;
+  const suratBaruCount = suratList.filter(sr => sr.status === 'terkirim').length;
+  const totalNotifs = pendingLaporanCount + pendingBeritaCount + suratBaruCount;
 
   const totalPenegak = dataPotensial.reduce((acc, curr) => acc + curr.jumlah_penegak_l + curr.jumlah_penegak_p, 0);
   const totalPandega = dataPotensial.reduce((acc, curr) => acc + curr.jumlah_pandega_l + curr.jumlah_pandega_p, 0);
@@ -1229,6 +1234,12 @@ export default function PortalAdmin() {
                     <button onClick={() => { setActiveTab('berita'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-brand-green"></div>
                       <span><strong>{pendingBeritaCount} Warta</strong> menunggu persetujuan</span>
+                    </button>
+                  )}
+                  {suratBaruCount > 0 && (
+                    <button onClick={() => { setActiveTab('surat'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <span><strong>{suratBaruCount} Surat baru</strong> dari DKR</span>
                     </button>
                   )}
                 </div>
@@ -1364,6 +1375,23 @@ export default function PortalAdmin() {
             {!isSidebarCollapsed && <span>Kegiatan & Form Builder</span>}</button>
 
           <button 
+            title={isSidebarCollapsed ? 'Surat Masuk DKR' : ''} 
+            onClick={() => { setActiveTab('surat'); setIsMobileMenuOpen(false); }}
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
+              activeTab === 'surat' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
+            }`}
+          >
+            <span className="relative shrink-0">
+              <MailIcon className="w-4 h-4" />
+              {isSidebarCollapsed && suratBaruCount > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>}
+            </span>
+            {!isSidebarCollapsed && <span className="flex-1">Surat Masuk DKR</span>}
+            {!isSidebarCollapsed && suratBaruCount > 0 && (
+              <span className="bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full">{suratBaruCount}</span>
+            )}
+          </button>
+
+          <button 
             title={isSidebarCollapsed ? 'Personalia DKC' : ''} 
             onClick={() => { setActiveTab('personalia'); setIsMobileMenuOpen(false); }}
             className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
@@ -1483,6 +1511,12 @@ export default function PortalAdmin() {
                       <button onClick={() => { setActiveTab('berita'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-brand-green"></div>
                         <span><strong>{pendingBeritaCount} Warta</strong> menunggu persetujuan</span>
+                      </button>
+                    )}
+                    {suratBaruCount > 0 && (
+                      <button onClick={() => { setActiveTab('surat'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                        <span><strong>{suratBaruCount} Surat baru</strong> dari DKR</span>
                       </button>
                     )}
                   </div>
@@ -2907,6 +2941,11 @@ export default function PortalAdmin() {
             </div>
             )}
           </div>
+        )}
+
+        {/* TAB: SURAT MASUK DARI DKR */}
+        {activeTab === 'surat' && (
+          <SuratAdminPanel list={suratList} reload={reloadSurat} />
         )}
 
         {/* TAB 4B: PERSONALIA DKC */}

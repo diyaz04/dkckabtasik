@@ -347,6 +347,123 @@ app.post('/api/dkc/update', async (req: Request, res: Response) => {
   }
 });
 
+// ── Surat DKR → DKC ──
+const SURAT_JENIS = ['permohonan_pemateri', 'undangan', 'permohonan_lainnya', 'pemberitahuan', 'lainnya'];
+const SURAT_STATUS_RESPON = ['dibaca', 'diterima', 'akan_hadir', 'diwakilkan', 'tidak_dapat_hadir', 'ditolak', 'selesai'];
+
+// Daftar surat. Dengan ?kecamatan_id= → surat milik DKR itu; tanpa filter → semua (dashboard admin DKC)
+app.get('/api/surat-dkr', async (req: Request, res: Response) => {
+  try {
+    const { kecamatan_id } = req.query;
+    let query = supabaseAdmin.from('surat_dkr').select('*').order('created_at', { ascending: false }).limit(500);
+    if (kecamatan_id) query = query.eq('kecamatan_id', kecamatan_id as string);
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+    const { data: kecs } = await supabaseAdmin.from('kecamatan').select('id, nama_kecamatan');
+    const nameById = new Map<string, string>((kecs || []).map((k: any) => [k.id, k.nama_kecamatan]));
+    res.json((data || []).map((row: any) => ({ ...row, kecamatan_nama: nameById.get(row.kecamatan_id) || row.kecamatan_id })));
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DKR mengirim surat baru
+app.post('/api/surat-dkr/save', async (req: Request, res: Response) => {
+  try {
+    const { kecamatan_id, jenis, nomor_surat, perihal, tanggal_surat, tanggal_acara, keterangan, file_url, file_nama } = req.body;
+    if (!kecamatan_id) return res.status(400).json({ error: 'Kecamatan tidak dikenali, silakan login ulang' });
+    if (!perihal || !String(perihal).trim()) return res.status(400).json({ error: 'Perihal surat wajib diisi' });
+    if (!file_url) return res.status(400).json({ error: 'File surat (PDF) wajib diunggah' });
+    if (!SURAT_JENIS.includes(jenis)) return res.status(400).json({ error: 'Jenis surat tidak valid' });
+    const { data, error } = await supabaseAdmin.from('surat_dkr').insert({
+      kecamatan_id,
+      jenis,
+      nomor_surat: nomor_surat ? String(nomor_surat).trim() : null,
+      perihal: String(perihal).trim(),
+      tanggal_surat: tanggal_surat || null,
+      tanggal_acara: tanggal_acara || null,
+      keterangan: keterangan ? String(keterangan).trim() : null,
+      file_url,
+      file_nama: file_nama || null,
+      status: 'terkirim',
+      dilihat_dkr: true,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, surat: data });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin membuka surat → otomatis "sudah dibaca" (hanya jika masih 'terkirim')
+app.post('/api/surat-dkr/read', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'ID wajib diisi' });
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin.from('surat_dkr')
+      .update({ status: 'dibaca', dibaca_at: now, dilihat_dkr: false, updated_at: now })
+      .eq('id', id).eq('status', 'terkirim');
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin memberi tanggapan / mengubah status
+app.post('/api/surat-dkr/status', async (req: Request, res: Response) => {
+  try {
+    const { id, status, tanggapan, diwakili_oleh } = req.body;
+    if (!id) return res.status(400).json({ error: 'ID wajib diisi' });
+    if (!SURAT_STATUS_RESPON.includes(status)) return res.status(400).json({ error: 'Status tidak valid' });
+    if (status === 'diwakilkan' && !(diwakili_oleh && String(diwakili_oleh).trim())) {
+      return res.status(400).json({ error: 'Nama pihak yang mewakili wajib diisi' });
+    }
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin.from('surat_dkr').update({
+      status,
+      tanggapan: tanggapan ? String(tanggapan).trim() : null,
+      diwakili_oleh: status === 'diwakilkan' ? String(diwakili_oleh).trim() : null,
+      ditanggapi_at: now,
+      dilihat_dkr: false,
+      updated_at: now,
+    }).eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DKR menandai update status sudah dilihat
+app.post('/api/surat-dkr/seen', async (req: Request, res: Response) => {
+  try {
+    const { id, kecamatan_id } = req.body;
+    if (!id || !kecamatan_id) return res.status(400).json({ error: 'ID dan kecamatan wajib diisi' });
+    const { error } = await supabaseAdmin.from('surat_dkr').update({ dilihat_dkr: true }).eq('id', id).eq('kecamatan_id', kecamatan_id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Hapus surat. DKR (kirim kecamatan_id) hanya boleh menghapus surat miliknya yang BELUM dibaca; admin (tanpa kecamatan_id) bebas.
+app.post('/api/surat-dkr/delete', async (req: Request, res: Response) => {
+  try {
+    const { id, kecamatan_id } = req.body;
+    if (!id) return res.status(400).json({ error: 'ID wajib diisi' });
+    let query = supabaseAdmin.from('surat_dkr').delete().eq('id', id);
+    if (kecamatan_id) query = query.eq('kecamatan_id', kecamatan_id).eq('status', 'terkirim');
+    const { error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Personalia ──
 app.get('/api/personalia', async (req: Request, res: Response) => {
   try {

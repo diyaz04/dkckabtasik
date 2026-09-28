@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
+import SuratDkrPanel from './SuratDkrPanel';
+import { useSuratDkr } from '../utils/suratDkr';
+import { Mail as MailIcon } from 'lucide-react';
 import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -19,7 +22,7 @@ import GreetingBanner from './GreetingBanner';
 
 export default function PortalDkr() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan' | 'tagihan_cabang'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan' | 'tagihan_cabang' | 'surat'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -28,6 +31,7 @@ export default function PortalDkr() {
   
   const [user, setUser] = useState<any>(null);
   const [kecamatan, setKecamatan] = useState<Kecamatan | null>(null);
+  const { list: suratList, reload: reloadSurat } = useSuratDkr('dkr', kecamatan?.id);
 
   // States
   const [profile, setProfile] = useState<DkrProfile | null>(null);
@@ -733,7 +737,8 @@ export default function PortalDkr() {
   
   const verifiedLaporanCount = laporanList.filter(l => l.status === 'diterima' || l.status === 'ditolak').length;
   const verifiedBeritaCount = berita.filter(b => b.status === 'approved' || b.status === 'rejected').length;
-  const totalNotifs = verifiedLaporanCount + verifiedBeritaCount;
+  const suratUpdateCount = suratList.filter(sr => !sr.dilihat_dkr).length;
+  const totalNotifs = verifiedLaporanCount + verifiedBeritaCount + suratUpdateCount;
 
   const getPesertaName = (data: any, schema?: any[]): string => {
     if (!data) return 'Tanpa Nama';
@@ -789,6 +794,12 @@ export default function PortalDkr() {
                     <button onClick={() => { setActiveTab('berita'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-brand-green"></div>
                       <span><strong>{verifiedBeritaCount} Ajuan Warta</strong> telah ditinjau</span>
+                    </button>
+                  )}
+                  {suratUpdateCount > 0 && (
+                    <button onClick={() => { setActiveTab('surat'); setIsNotifMenuOpen(false); }} className="w-full text-left p-2 rounded-xl hover:bg-gray-50 text-xs text-brand-brown-dark flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <span><strong>{suratUpdateCount} Surat</strong> mendapat tanggapan DKC</span>
                     </button>
                   )}
                 </div>
@@ -934,6 +945,27 @@ export default function PortalDkr() {
             }`}
           >
             <Lock className="w-4 h-4 text-brand-green" /> {!isSidebarCollapsed && <span>Pendaftaran Kolektif</span>}
+          </button>
+
+          {/* Kategori: SURAT-MENYURAT */}
+          <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
+            {isSidebarCollapsed ? '•' : 'Surat-Menyurat'}
+          </p>
+          <button 
+            title={isSidebarCollapsed ? 'Surat ke DKC' : ''}
+            onClick={() => { setActiveTab('surat'); setIsMobileMenuOpen(false); }}
+            className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
+              activeTab === 'surat' ? 'bg-[#4a3227] border-l-4 border-brand-green text-white font-bold' : 'text-gray-300 hover:bg-white/5'
+            }`}
+          >
+            <span className="relative shrink-0">
+              <MailIcon className="w-4 h-4 text-brand-orange" />
+              {isSidebarCollapsed && suratUpdateCount > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
+            </span>
+            {!isSidebarCollapsed && <span className="flex-1">Surat ke DKC</span>}
+            {!isSidebarCollapsed && suratUpdateCount > 0 && (
+              <span className="bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-full">{suratUpdateCount}</span>
+            )}
           </button>
 
           {/* Kategori: LAPORAN & AKUN */}
@@ -1676,6 +1708,11 @@ export default function PortalDkr() {
               </div>
             )}
           </div>
+        )}
+
+        {/* DKR TAB: SURAT KE DKC */}
+        {activeTab === 'surat' && kecamatan && (
+          <SuratDkrPanel kecamatan={{ id: kecamatan.id, nama_kecamatan: kecamatan.nama_kecamatan }} list={suratList} reload={reloadSurat} />
         )}
 
         {/* DKR TAB 6: KELOLA PERSONALIA */}
