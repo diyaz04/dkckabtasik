@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
+import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, Bell, Menu, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
@@ -74,6 +75,7 @@ export default function PortalDkr() {
   const [newPersonGolongan, setNewPersonGolongan] = useState<'penegak' | 'pandega' | 'pembina' | 'lainnya'>('penegak');
   const [newPersonFoto, setNewPersonFoto] = useState('');
   const [editingPersonaliaId, setEditingPersonaliaId] = useState<string | null>(null);
+  const [newPersonExtra, setNewPersonExtra] = useState<PersonaliaExtra>(emptyPersonaliaExtra());
 
   // Tagihan Cabang states
   const [tagihanCabangList, setTagihanCabangList] = useState<any[]>([]);
@@ -599,6 +601,15 @@ export default function PortalDkr() {
     }
   };
 
+  const resetPersonaliaForm = () => {
+    setEditingPersonaliaId(null);
+    setNewPersonNama('');
+    setNewPersonJabatan('');
+    setNewPersonGolongan('penegak');
+    setNewPersonFoto('');
+    setNewPersonExtra(emptyPersonaliaExtra());
+  };
+
   // Add Personalia (CRUD)
   const handleAddPersonalia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -614,19 +625,22 @@ export default function PortalDkr() {
           nama: newPersonNama,
           jabatan: newPersonJabatan,
           golongan: newPersonGolongan,
-          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
+          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+          ...serializeExtra(newPersonExtra)
         })
       });
 
       if (res.ok) {
-        setNewPersonNama('');
-        setNewPersonJabatan('');
-        setNewPersonFoto('');
+        resetPersonaliaForm();
         alert('Struktur personalia berhasil diperbarui!');
         loadDkrData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert('Gagal menyimpan data personalia.' + (errData.error ? '\n' + errData.error : ''));
       }
     } catch (e) {
       console.error(e);
+      alert('Gagal menyimpan data personalia: koneksi bermasalah.');
     }
   };
 
@@ -637,6 +651,8 @@ export default function PortalDkr() {
     setNewPersonJabatan(p.jabatan);
     setNewPersonGolongan(p.golongan);
     setNewPersonFoto(p.foto_url || '');
+    setNewPersonExtra(extraFromPersonalia(p));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleUpdatePersonalia = async (e: React.FormEvent) => {
@@ -651,21 +667,21 @@ export default function PortalDkr() {
           nama: newPersonNama,
           jabatan: newPersonJabatan,
           golongan: newPersonGolongan,
-          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
+          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+          ...serializeExtra(newPersonExtra)
         })
       });
       if (res.ok) {
-        setEditingPersonaliaId(null);
-        setNewPersonNama('');
-        setNewPersonJabatan('');
-        setNewPersonFoto('');
+        resetPersonaliaForm();
         alert('Data personalia berhasil diperbarui!');
         loadDkrData();
       } else {
-        alert('Gagal memperbarui data personalia.');
+        const errData = await res.json().catch(() => ({}));
+        alert('Gagal memperbarui data personalia.' + (errData.error ? '\n' + errData.error : ''));
       }
     } catch (e) {
       console.error(e);
+      alert('Gagal memperbarui data personalia: koneksi bermasalah.');
     }
   };
 
@@ -1679,7 +1695,7 @@ export default function PortalDkr() {
                     {editingPersonaliaId ? '✏️ Edit Personil DKR' : 'Tambah Personil DKR'}
                   </h3>
                   {editingPersonaliaId && (
-                    <button type="button" onClick={() => { setEditingPersonaliaId(null); setNewPersonNama(''); setNewPersonJabatan(''); setNewPersonFoto(''); }}
+                    <button type="button" onClick={resetPersonaliaForm}
                       className="text-[10px] font-bold text-gray-400 hover:text-brand-red uppercase font-mono cursor-pointer">
                       ✕ Batal
                     </button>
@@ -1723,6 +1739,8 @@ export default function PortalDkr() {
                       className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-[10px] text-gray-500 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
                     />
                   </div>
+
+                  <PersonaliaExtraFields value={newPersonExtra} onChange={setNewPersonExtra} />
 
                   <button
                     type="submit"

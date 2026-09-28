@@ -1033,8 +1033,9 @@ export default function LandingPage() {
           {dkcPersonalia.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {dkcPersonalia.map((p) => (
-                <div 
+                <Link 
                   key={p.id}
+                  to={`/personalia/${p.id}`}
                   className="bg-[#2e1d15] rounded-3xl overflow-hidden shadow-md relative h-[360px] flex flex-col justify-end group cursor-pointer"
                 >
                   {/* Full image */}
@@ -1062,8 +1063,11 @@ export default function LandingPage() {
                         {p.golongan}
                       </span>
                     </div>
+                    <span className="mt-2.5 flex items-center justify-center gap-1.5 w-full bg-white text-brand-brown-dark group-hover:bg-brand-brown-dark group-hover:text-white text-[10px] font-extrabold font-mono uppercase tracking-wider py-2 rounded-xl transition-colors">
+                      Lihat Detail <ArrowRight className="w-3 h-3" />
+                    </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (

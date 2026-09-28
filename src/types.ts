@@ -55,6 +55,12 @@ export interface SakaProfile {
   updated_at: string;
 }
 
+export interface PersonaliaEntry {
+  tahun: string;
+  judul: string;
+  keterangan?: string;
+}
+
 export interface Personalia {
   id: string;
   owner_type: 'dkc' | 'dkr' | 'saka';
@@ -65,6 +71,14 @@ export interface Personalia {
   jabatan: string;
   golongan: 'penegak' | 'pandega' | 'pembina' | 'lainnya';
   urutan: number;
+  tentang?: string | null;
+  foto_background_url?: string | null;
+  riwayat_organisasi?: PersonaliaEntry[] | null;
+  riwayat_pendidikan?: PersonaliaEntry[] | null;
+  prestasi_akademik?: PersonaliaEntry[] | null;
+  prestasi_non_akademik?: PersonaliaEntry[] | null;
+  owner_nama?: string; // hanya diisi oleh GET /api/personalia/:id
+  owner_slug?: string | null;
 }
 
 export interface Pangkalan {

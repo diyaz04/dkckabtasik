@@ -1,5 +1,6 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
+import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -56,6 +57,7 @@ export default function PortalAdmin() {
   const [newPersonGolongan, setNewPersonGolongan] = useState<'penegak' | 'pandega' | 'pembina' | 'lainnya'>('pandega');
   const [newPersonFoto, setNewPersonFoto] = useState('');
   const [personaliaSaving, setPersonaliaSaving] = useState(false);
+  const [newPersonExtra, setNewPersonExtra] = useState<PersonaliaExtra>(emptyPersonaliaExtra());
   const [editingPersonaliaId, setEditingPersonaliaId] = useState<string | null>(null);
 
   // Laporan States
@@ -587,6 +589,15 @@ export default function PortalAdmin() {
     }
   };
 
+  const resetPersonaliaForm = () => {
+    setNewPersonNama('');
+    setNewPersonJabatan('');
+    setNewPersonGolongan('pandega');
+    setNewPersonFoto('');
+    setNewPersonExtra(emptyPersonaliaExtra());
+    setEditingPersonaliaId(null);
+  };
+
   const handleAddPersonalia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPersonNama || !newPersonJabatan) return;
@@ -601,21 +612,21 @@ export default function PortalAdmin() {
           nama: newPersonNama,
           jabatan: newPersonJabatan,
           golongan: newPersonGolongan,
-          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=400'
+          foto_url: newPersonFoto || 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=400',
+          ...serializeExtra(newPersonExtra)
         })
       });
       if (res.ok) {
-        setNewPersonNama('');
-        setNewPersonJabatan('');
-        setNewPersonFoto('');
-        setEditingPersonaliaId(null);
+        resetPersonaliaForm();
         alert('Struktur Pengurus DKC berhasil diperbarui!');
         loadData();
       } else {
-        alert('Gagal menyimpan data personalia.');
+        const errData = await res.json().catch(() => ({}));
+        alert('Gagal menyimpan data personalia.' + (errData.error ? '\n' + errData.error : ''));
       }
     } catch (e) {
       console.error(e);
+      alert('Gagal menyimpan data personalia: koneksi bermasalah.');
     } finally {
       setPersonaliaSaving(false);
     }
@@ -2955,6 +2966,8 @@ export default function PortalAdmin() {
                     )}
                   </div>
 
+                  <PersonaliaExtraFields value={newPersonExtra} onChange={setNewPersonExtra} />
+
                   <button
                     type="submit"
                     disabled={personaliaSaving}
@@ -2962,6 +2975,15 @@ export default function PortalAdmin() {
                   >
                     {personaliaSaving ? 'Menyimpan...' : (editingPersonaliaId ? 'Simpan Perubahan' : 'Tambahkan Pengurus')}
                   </button>
+                  {editingPersonaliaId && (
+                    <button
+                      type="button"
+                      onClick={resetPersonaliaForm}
+                      className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xs py-2.5 rounded-xl uppercase cursor-pointer"
+                    >
+                      Batal Edit
+                    </button>
+                  )}
                 </form>
               </div>
 
@@ -2995,7 +3017,9 @@ export default function PortalAdmin() {
                             setNewPersonJabatan(p.jabatan);
                             setNewPersonGolongan(p.golongan);
                             setNewPersonFoto(p.foto_url);
+                            setNewPersonExtra(extraFromPersonalia(p));
                             setEditingPersonaliaId(p.id);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
                           }}
                           className="text-blue-500 hover:text-blue-600 font-bold text-[10px] cursor-pointer text-right"
                         >

@@ -362,18 +362,39 @@ app.get('/api/personalia', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/personalia/:id', async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('personalia').select('*').eq('id', req.params.id).maybeSingle();
+    if (error || !data) return res.status(404).json({ error: 'Profil tidak ditemukan' });
+    let owner_nama = 'DKC Kabupaten Tasikmalaya';
+    let owner_slug: string | null = null;
+    if (data.owner_type === 'dkr' && data.kecamatan_id) {
+      const { data: keca } = await supabaseAdmin.from('kecamatan').select('nama_kecamatan, slug').eq('id', data.kecamatan_id).maybeSingle();
+      owner_nama = 'DKR ' + (keca?.nama_kecamatan || '');
+      owner_slug = keca?.slug || null;
+    } else if (data.owner_type === 'saka') {
+      owner_nama = 'SAKA';
+    }
+    res.json({ ...data, owner_nama, owner_slug });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/personalia/save', async (req: Request, res: Response) => {
   try {
     const data = req.body;
     if (data.id) {
-      await supabaseAdmin.from('personalia').update(data).eq('id', data.id);
+      const { error: updErr } = await supabaseAdmin.from('personalia').update(data).eq('id', data.id);
+      if (updErr) return res.status(500).json({ error: updErr.message });
     } else {
       let query = supabaseAdmin.from('personalia').select('id').eq('owner_type', data.owner_type);
       if (data.kecamatan_id) query = query.eq('kecamatan_id', data.kecamatan_id);
       if (data.saka_id) query = query.eq('saka_id', data.saka_id);
       const { data: existing } = await query;
       data.urutan = data.urutan || (existing ? existing.length + 1 : 1);
-      await supabaseAdmin.from('personalia').insert(data);
+      const { error: insErr } = await supabaseAdmin.from('personalia').insert(data);
+      if (insErr) return res.status(500).json({ error: insErr.message });
     }
     res.json({ success: true });
   } catch (error: any) {
@@ -385,7 +406,12 @@ app.post('/api/personalia/update', async (req: Request, res: Response) => {
   try {
     const { id, nama, jabatan, golongan, foto_url } = req.body;
     if (!id) return res.status(400).json({ error: 'ID wajib diisi' });
-    await supabaseAdmin.from('personalia').update({ nama, jabatan, golongan, foto_url }).eq('id', id);
+    const payload: Record<string, any> = { nama, jabatan, golongan, foto_url };
+    for (const key of ['tentang', 'foto_background_url', 'riwayat_organisasi', 'riwayat_pendidikan', 'prestasi_akademik', 'prestasi_non_akademik']) {
+      if (req.body[key] !== undefined) payload[key] = req.body[key];
+    }
+    const { error } = await supabaseAdmin.from('personalia').update(payload).eq('id', id);
+    if (error) return res.status(500).json({ error: error.message });
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

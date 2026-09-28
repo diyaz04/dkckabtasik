@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import DialogHost from './components/DialogHost';
+import PersonaliaDetailPage from './components/PersonaliaDetailPage';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -77,6 +78,15 @@ export default function App() {
           element={
             <PublicLayout>
               <DkrDetailPage />
+            </PublicLayout>
+          } 
+        />
+
+        <Route 
+          path="/personalia/:id" 
+          element={
+            <PublicLayout>
+              <PersonaliaDetailPage />
             </PublicLayout>
           } 
         />

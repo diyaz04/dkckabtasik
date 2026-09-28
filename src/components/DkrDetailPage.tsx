@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Users, Building, ShieldAlert, Award, Calendar, BookOpen, 
-  MapPin, Plus, GraduationCap, CheckCircle2 
+  MapPin, Plus, GraduationCap, CheckCircle2, ArrowRight 
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Kecamatan, DkrProfile, Personalia, Pangkalan, DataPotensial, Berita, AgendaKegiatan } from '../types';
@@ -148,9 +148,10 @@ export default function DkrDetailPage() {
               {personalia.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {personalia.map((p) => (
-                    <div 
+                    <Link 
                       key={p.id}
-                      className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm relative group h-80 flex flex-col justify-end"
+                      to={`/personalia/${p.id}`}
+                      className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm relative group h-80 flex flex-col justify-end cursor-pointer"
                     >
                       {/* Full height Person Photo */}
                       <img 
@@ -178,8 +179,11 @@ export default function DkrDetailPage() {
                             {p.golongan}
                           </span>
                         </div>
+                        <span className="mt-2.5 flex items-center justify-center gap-1.5 w-full bg-white text-brand-brown-dark group-hover:bg-brand-brown-dark group-hover:text-white text-[10px] font-extrabold font-mono uppercase tracking-wider py-2 rounded-xl transition-colors">
+                          Lihat Detail <ArrowRight className="w-3 h-3" />
+                        </span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (

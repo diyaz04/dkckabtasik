@@ -89,7 +89,13 @@ create table if not exists personalia (
   nama text not null,
   jabatan text not null,
   golongan text not null check (golongan in ('penegak', 'pandega', 'pembina', 'lainnya')),
-  urutan int not null default 0
+  urutan int not null default 0,
+  tentang text,
+  foto_background_url text,
+  riwayat_organisasi jsonb not null default '[]'::jsonb,
+  riwayat_pendidikan jsonb not null default '[]'::jsonb,
+  prestasi_akademik jsonb not null default '[]'::jsonb,
+  prestasi_non_akademik jsonb not null default '[]'::jsonb
 );
 
 -- =====================================================================
