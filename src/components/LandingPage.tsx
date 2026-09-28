@@ -105,6 +105,7 @@ function OverlappingSection({ children, id, className = "", isFirst = false }: O
 
 
 import { Megaphone, Clock, CalendarDays, ExternalLink, ArrowRight } from 'lucide-react';
+import { useKlasemenVisible } from '../utils/useKlasemenVisible';
 
 const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: { beritaList: any[], agendaList: any[], themeColors: any, setKegiatanSubTab: any }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -281,7 +282,7 @@ export default function LandingPage() {
   const [heroContent, setHeroContent] = useState<any>(null);
   const [dataPotensial, setDataPotensial] = useState<any[]>([]);
   const [laporanList, setLaporanList] = useState<any[]>([]);
-  const [showKlasemen, setShowKlasemen] = useState<boolean>(true);
+  const showKlasemen = useKlasemenVisible();
   const [themeColors, setThemeColors] = useState({
     brandOrange: '#F5A623',
     brandGreen: '#4CAF50',
@@ -396,13 +397,6 @@ export default function LandingPage() {
           brandBrownDark: theme.content.brandBrownDark || '#5C4033',
           brandBrownMid: theme.content.brandBrownMid || '#8B7355',
         });
-      }
-
-      const klasemen = scData.find((item: any) => item.section_key === 'klasemen');
-      if (klasemen && klasemen.content) {
-        setShowKlasemen(klasemen.content.show_klasemen !== false);
-      } else {
-        setShowKlasemen(true);
       }
 
       // 8. Data Potensial (for map stats)

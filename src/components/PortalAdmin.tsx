@@ -1,6 +1,8 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
 import SuratAdminPanel from './SuratAdminPanel';
+import VisibilityToggleCard from './VisibilityToggleCard';
+import { cacheKlasemenVisible } from '../utils/useKlasemenVisible';
 import { useSuratDkr } from '../utils/suratDkr';
 import { Mail as MailIcon } from 'lucide-react';
 import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
@@ -78,6 +80,7 @@ export default function PortalAdmin() {
   const [laporanSubTab, setLaporanSubTab] = useState<'pending' | 'verified'>('pending');
   const [expandedLaporanId, setExpandedLaporanId] = useState<string | null>(null);
   const [showKlasemen, setShowKlasemen] = useState<boolean>(true);
+  const [savingKlasemen, setSavingKlasemen] = useState<boolean>(false);
   const [showLaporanMenu, setShowLaporanMenu] = useState<boolean>(true);
 
   // Medsos states
@@ -343,8 +346,10 @@ export default function PortalAdmin() {
     }
   };
 
-  // Toggle Klasemen Landingpage
+  // Toggle Klasemen Landingpage (section di landingpage + menu di navbar)
   const handleToggleKlasemen = async (val: boolean) => {
+    if (savingKlasemen) return;
+    setSavingKlasemen(true);
     try {
       const res = await fetch('/api/site_content/save', {
         method: 'POST',
@@ -356,6 +361,7 @@ export default function PortalAdmin() {
       });
       if (res.ok) {
         setShowKlasemen(val);
+        cacheKlasemenVisible(val);
         const updatedSc = await fetch('/api/site_content').then(r => r.json());
         setSiteContent(updatedSc);
       } else {
@@ -363,6 +369,9 @@ export default function PortalAdmin() {
       }
     } catch (err) {
       console.error(err);
+      alert('Gagal memperbarui pengaturan klasemen. Periksa koneksi lalu coba lagi.');
+    } finally {
+      setSavingKlasemen(false);
     }
   };
 
@@ -3781,38 +3790,17 @@ export default function PortalAdmin() {
             </div>
 
             {/* Aksi Klasemen Toggle Card */}
-            <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="space-y-1">
-                <h3 className="text-sm font-extrabold text-brand-brown-dark flex items-center gap-2">
-                  <BarChart2 className="w-5 h-5 text-brand-orange" />
-                  Pengaturan Klasemen Keaktifan Kwarran di Landingpage
-                </h3>
-                <p className="text-xs text-gray-500 max-w-xl">
-                  Klasemen dihitung otomatis dari akumulasi poin laporan kegiatan 02GP &amp; 01 Diklat yang disetujui oleh admin. Anda dapat menampilkan atau menyembunyikan tabel klasemen dari halaman depan landingpage.
-                </p>
-              </div>
-
-              <div>
-                <button
-                  onClick={() => handleToggleKlasemen(!showKlasemen)}
-                  className={`w-full md:w-auto px-5 py-3 rounded-2xl font-black font-mono text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    showKlasemen
-                      ? 'bg-[#0E9F6E] hover:bg-[#10B981] text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
-                  }`}
-                >
-                  {showKlasemen ? (
-                    <>
-                      <Check className="w-4 h-4" /> Tampil di Landingpage (Aktif)
-                    </>
-                  ) : (
-                    <>
-                      <X className="w-4 h-4" /> Sembunyi dari Landingpage
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+            <VisibilityToggleCard
+              icon={<BarChart2 className="w-5 h-5 text-brand-orange" />}
+              title="Klasemen Keaktifan Kwarran"
+              description="Klasemen dihitung otomatis dari poin laporan kegiatan 02GP & 01 Diklat yang sudah disetujui admin. Nonaktifkan untuk menyembunyikan klasemen dari website publik."
+              checked={showKlasemen}
+              saving={savingKlasemen}
+              onChange={handleToggleKlasemen}
+              onLabel="Aktif"
+              offLabel="Nonaktif"
+              effects={['Section Klasemen di landingpage', 'Menu "Klasemen DKR" di navbar']}
+            />
 
             {/* Aksi Visibilitas Menu Laporan Toggle Card */}
             <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 mt-6">

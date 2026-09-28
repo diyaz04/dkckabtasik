@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, type MouseEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useKlasemenVisible } from '../utils/useKlasemenVisible';
 import { Menu, X, Compass, ChevronDown, Users, Trophy, Tent, Newspaper, CalendarDays, FolderDown, MapPinned, IdCard } from 'lucide-react';
 
 export default function Navbar() {
@@ -42,21 +43,7 @@ export default function Navbar() {
     return location.pathname === '/' && location.hash === hash;
   };
 
-  const [showKlasemen, setShowKlasemen] = useState(true);
-
-  useEffect(() => {
-    fetch('/api/site_content')
-      .then(res => res.json())
-      .then((data: any[]) => {
-        if (Array.isArray(data)) {
-          const klasemen = data.find(item => item.section_key === 'klasemen');
-          if (klasemen && klasemen.content) {
-            setShowKlasemen(klasemen.content.show_klasemen !== false);
-          }
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const showKlasemen = useKlasemenVisible();
 
   const isHomeActive = () => {
     return location.pathname === '/' && (!location.hash || location.hash === '#top' || location.hash === '');
@@ -245,15 +232,17 @@ export default function Navbar() {
 
           {/* Kategori: KOMUNITAS */}
           <p className="px-3 pt-2 pb-0.5 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono">Komunitas</p>
-          <Link
-            to="/#klasemen"
-            onClick={() => setIsOpen(false)}
-            className={`flex items-center gap-2 text-xs font-bold px-3 py-2.5 rounded-lg uppercase ${
-              isActiveSection('#klasemen') ? 'text-brand-orange bg-[#F5EFE6]' : 'text-[#5C4033] hover:bg-[#F5EFE6]'
-            }`}
-          >
-            <Trophy className="w-3.5 h-3.5 text-brand-orange" /> Klasemen Keaktifan DKR
-          </Link>
+          {showKlasemen && (
+            <Link
+              to="/#klasemen"
+              onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-2 text-xs font-bold px-3 py-2.5 rounded-lg uppercase ${
+                isActiveSection('#klasemen') ? 'text-brand-orange bg-[#F5EFE6]' : 'text-[#5C4033] hover:bg-[#F5EFE6]'
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5 text-brand-orange" /> Klasemen Keaktifan DKR
+            </Link>
+          )}
           <Link
             to="/#saka"
             onClick={() => setIsOpen(false)}
