@@ -2459,7 +2459,7 @@ export default function PortalDkr() {
             
             <div className="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
               {addPesertaFormData?.form_schema ? (
-                addPesertaFormData.form_schema.map((f: any) => (
+                addPesertaFormData.form_schema.filter((f: any) => !(f.label?.toLowerCase().includes('kwarran') || f.label?.toLowerCase().includes('kwartir ranting'))).map((f: any) => (
                   <div key={f.id}>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                       {f.label} {f.required && <span className="text-brand-orange">*</span>}
