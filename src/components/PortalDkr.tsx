@@ -85,6 +85,7 @@ export default function PortalDkr() {
   const [tagihanCabangList, setTagihanCabangList] = useState<any[]>([]);
   const [activeAgendas, setActiveAgendas] = useState<any[]>([]);
   const [showAddPesertaModal, setShowAddPesertaModal] = useState(false);
+  const [editPesertaId, setEditPesertaId] = useState<string | null>(null);
   const [addPesertaFormData, setAddPesertaFormData] = useState<any>({});
   const [addPesertaSaving, setAddPesertaSaving] = useState(false);
   const [addPesertaFormValues, setAddPesertaFormValues] = useState<any>({});
@@ -2406,7 +2407,7 @@ export default function PortalDkr() {
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-6 border-b flex justify-between items-center bg-gray-50">
-              <h3 className="font-extrabold text-brand-brown-dark text-lg">Tambah Peserta</h3>
+              <h3 className="font-extrabold text-brand-brown-dark text-lg">{editPesertaId ? 'Edit Peserta' : 'Tambah Peserta'}</h3>
               <button onClick={() => setShowAddPesertaModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
@@ -2478,7 +2479,7 @@ export default function PortalDkr() {
                     });
                     
                     if (res.ok) {
-                      alert('Peserta berhasil ditambahkan!');
+                      alert(editPesertaId ? 'Peserta berhasil diperbarui!' : 'Peserta berhasil ditambahkan!');
                       setShowAddPesertaModal(false);
                       setAddPesertaFormValues({});
                       

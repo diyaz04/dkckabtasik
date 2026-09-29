@@ -855,6 +855,34 @@ app.get('/api/agenda/:id/registrants', async (req: Request, res: Response) => {
   }
 });
 
+app.put('/api/registrants/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { data_peserta } = req.body;
+    const { data, error } = await supabaseAdmin.from('pendaftaran_peserta')
+      .update({ data_peserta })
+      .eq('id', id).select().single();
+    if (error) throw error;
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/registrants/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabaseAdmin.from('pendaftaran_peserta')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // Batch registration for collective (kolektif) enrollment
 app.post('/api/agenda/:id/register-batch', async (req: Request, res: Response) => {
   try {
@@ -1039,6 +1067,27 @@ app.get('/api/users', async (_req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+app.post('/api/users/reset_password', async (req: Request, res: Response) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ error: 'User ID is required' });
+
+    // Generate random 8 character alphanumeric password
+    const newPassword = Math.random().toString(36).slice(-8);
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
+      password: newPassword,
+    });
+
+    if (error) throw error;
+
+    res.json({ success: true, newPassword });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 app.post('/api/users/save', async (req: Request, res: Response) => {
   try {

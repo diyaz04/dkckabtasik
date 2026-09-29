@@ -4,7 +4,7 @@ import SuratAdminPanel from './SuratAdminPanel';
 import VisibilityToggleCard from './VisibilityToggleCard';
 import { cacheKlasemenVisible } from '../utils/useKlasemenVisible';
 import { useSuratDkr } from '../utils/suratDkr';
-import { Mail as MailIcon } from 'lucide-react';
+import { Mail as MailIcon, Key } from 'lucide-react';
 import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -915,6 +915,27 @@ export default function PortalAdmin() {
   };
 
   // Create User DKR / SAKA
+
+  const handleResetPassword = async (userId: string, userName: string) => {
+    if (!confirm(`Anda yakin ingin mereset kata sandi untuk akun ${userName}?`)) return;
+    
+    try {
+      const res = await fetch('/api/users/reset_password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert(`Kata sandi untuk ${userName} berhasil direset!\n\nKata Sandi Baru: ${data.newPassword}\n\nHarap salin kata sandi ini dan berikan kepada pengguna yang bersangkutan.`);
+      } else {
+        alert(`Gagal mereset kata sandi: ${data.error}`);
+      }
+    } catch (error) {
+      alert('Terjadi kesalahan saat mereset kata sandi.');
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newRole === 'user' && (!newEmail || !newPassword || !newKecaId || !newNama)) {
@@ -3173,6 +3194,14 @@ export default function PortalAdmin() {
                           <p className="text-[10px] text-gray-400 mt-1">{usr.email}</p>
                         </div>
 
+                        
+                          <button
+                            onClick={() => handleResetPassword(usr.user_id, usr.nama)}
+                            className="bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange border border-brand-orange/20 px-3 py-1 rounded-xl text-[10px] font-extrabold flex items-center gap-1 transition-colors"
+                          >
+                            <Key className="w-3.5 h-3.5" /> Reset Password
+                          </button>
+
                         {/* Toggle active button for DKR */}
                         {keca && (
                           <div className="flex items-center gap-3">
@@ -3289,6 +3318,14 @@ export default function PortalAdmin() {
                           <h4 className="font-extrabold text-sm text-brand-brown-dark tracking-tight leading-none mt-2">{usr.nama}</h4>
                           <p className="text-[10px] text-gray-400 mt-1">{usr.email}</p>
                         </div>
+
+                          <button
+                            onClick={() => handleResetPassword(usr.user_id, usr.nama)}
+                            className="bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange border border-brand-orange/20 px-3 py-1 rounded-xl text-[10px] font-extrabold flex items-center gap-1 transition-colors shrink-0"
+                          >
+                            <Key className="w-3.5 h-3.5" /> Reset Password
+                          </button>
+
 
                         {/* Toggle active button for SAKA */}
                         {sakaItem && (
