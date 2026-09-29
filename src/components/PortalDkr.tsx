@@ -1558,9 +1558,53 @@ export default function PortalDkr() {
                     {tagihanPeserta.length > 0 ? (
                       <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {tagihanPeserta.map((p, i) => (
-                          <div key={i} className="text-xs font-mono bg-gray-50 p-2 rounded border flex justify-between">
-                            <span>{getPesertaName(p.data_peserta, agendaFormSchema)}</span>
-                            <span className={p.data_peserta?._is_lunas ? 'text-brand-green font-bold' : 'text-amber-500'}>{p.data_peserta?._is_lunas ? 'Lunas' : 'Belum Lunas'}</span>
+                          <div key={i} className="text-xs font-mono bg-gray-50 p-2 rounded border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div><span className="font-bold">{getPesertaName(p.data_peserta, agendaFormSchema)}</span></div>
+
+                                <div className="flex items-center gap-3">
+                                  <span className={p.data_peserta?._is_lunas ? 'text-brand-green font-bold' : 'text-amber-500'}>{p.data_peserta?._is_lunas ? 'Lunas' : 'Belum Lunas'}</span>
+                                  <button 
+                                    onClick={async () => {
+                                      const configRes = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/config`);
+                                      if (configRes.ok) {
+                                        const config = await configRes.json();
+                                        if (config && config.form_schema) {
+                                          setAddPesertaFormData({ form_schema: config.form_schema });
+                                          setEditPesertaId(p.id);
+                                          setAddPesertaFormValues(p.data_peserta || {});
+                                          setShowAddPesertaModal(true);
+                                        }
+                                      }
+                                    }}
+                                    className="text-brand-green hover:underline cursor-pointer"
+                                  >Edit</button>
+                                  <button 
+                                    onClick={async () => {
+                                      if(confirm('Hapus peserta ini?')) {
+                                        const res = await fetch(`/api/registrants/${p.id}`, { method: 'DELETE' });
+                                        if(res.ok) {
+                                          const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
+                                          const res2 = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/registrants`);
+                                          if(res2.ok) {
+                                            const data = await res2.json();
+                                            setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
+                                          }
+                                          const tagihanRes = await fetch(`/api/tagihan_kolektif?kecamatan_id=${keca.id}`);
+                                          if (tagihanRes.ok) {
+                                            const tList = await tagihanRes.json();
+                                            setTagihanCabangList(tList);
+                                            const updatedTagihan = tList.find((t: any) => t.agenda_id === selectedTagihan.agenda_id);
+                                            if (updatedTagihan) setSelectedTagihan(updatedTagihan);
+                                          }
+                                        } else {
+                                            alert('Gagal menghapus');
+                                        }
+                                      }
+                                    }}
+                                    className="text-red-500 hover:underline cursor-pointer"
+                                  >Hapus</button>
+                                </div>
+
                           </div>
                         ))}
                       </div>
@@ -1619,7 +1663,7 @@ export default function PortalDkr() {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                  tagihan_id: selectedTagihan.id,
+                                  id: selectedTagihan.id,
                                   bukti_bayar_url: tagihanReceipt,
                                   total_tagihan: tagihanPeserta.length * (selectedTagihan.camp_fee || 0)
                                 })
@@ -2480,6 +2524,22 @@ export default function PortalDkr() {
                     
                     if (res.ok) {
                       alert(editPesertaId ? 'Peserta berhasil diperbarui!' : 'Peserta berhasil ditambahkan!');
+                      // Refetch tagihan and peserta list
+                      const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
+                      const [regRes, tagRes] = await Promise.all([
+                        fetch(`/api/agenda/${selectedTagihan.agenda_id}/registrants`),
+                        fetch(`/api/tagihan_kolektif?kecamatan_id=${keca.id}`)
+                      ]);
+                      if (regRes.ok) {
+                        const data = await regRes.json();
+                        setTagihanPeserta(data.filter((d:any) => d.kecamatan_id === keca.id));
+                      }
+                      if (tagRes.ok) {
+                        const tList = await tagRes.json();
+                        setTagihanCabangList(tList);
+                        const updatedTagihan = tList.find((t: any) => t.agenda_id === selectedTagihan.agenda_id);
+                        if (updatedTagihan) setSelectedTagihan(updatedTagihan);
+                      }
                       setShowAddPesertaModal(false);
                       setAddPesertaFormValues({});
                       
