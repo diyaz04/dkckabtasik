@@ -185,30 +185,62 @@ export default function PortalAdmin() {
   };
 
   const loadData = async () => {
+    const cached = localStorage.getItem('admin_data_cache');
+    if (cached) {
+      try {
+        const c = JSON.parse(cached);
+        if (c.keca) setKecamatanList(c.keca);
+        if (c.saka) setSakaList(c.saka);
+        if (c.pot) setDataPotensial(c.pot);
+        if (c.news) setBeritaList(c.news);
+        if (c.age) setAgendaList(c.age);
+        if (c.users) setUserList(c.users);
+        if (c.info) setInformasiList(c.info);
+        if (c.sc) {
+          setSiteContent(c.sc);
+          const hero = c.sc.find((item: any) => item.section_key === 'hero');
+          if (hero && hero.content) {
+            setHeroTitle(hero.content.title);
+            setHeroSubtitle(hero.content.subtitle);
+            setHeroLead(hero.content.lead);
+            setHeroCta(hero.content.cta_text);
+            setHeroBadge(hero.content.badge_text);
+            setHeroBgImageUrl(hero.content.bg_image_url || 'https://media.suara.com/pictures/970x544/2023/08/14/79829-hari-pramuka-raimuna-nasional-xii.jpg');
+            setHeroBgOpacity(hero.content.bg_opacity !== undefined ? Number(hero.content.bg_opacity) : 0.4);
+          }
+          const medsos = c.sc.find((item: any) => item.section_key === 'medsos_dkc');
+          if (medsos && medsos.content) {
+            setDkcMedsosIg(medsos.content.ig || '');
+            setDkcMedsosYt(medsos.content.yt || '');
+            setDkcMedsosTk(medsos.content.tk || '');
+          }
+        }
+      } catch (e) {}
+    }
+
     try {
-      const keca = await fetch('/api/kecamatan').then(r => r.json());
+      const [keca, saka, pot, news, age, users, info, sc] = await Promise.all([
+        fetch('/api/kecamatan').then(r => r.json()),
+        fetch('/api/saka').then(r => r.json()),
+        fetch('/api/data_potensial').then(r => r.json()),
+        fetch('/api/berita').then(r => r.json()),
+        fetch('/api/agenda').then(r => r.json()),
+        fetch('/api/users').then(r => r.json()),
+        fetch('/api/informasi').then(r => r.json()),
+        fetch('/api/site_content').then(r => r.json())
+      ]);
+
       setKecamatanList(keca);
-
-      const saka = await fetch('/api/saka').then(r => r.json());
       setSakaList(saka);
-
-      const pot = await fetch('/api/data_potensial').then(r => r.json());
       setDataPotensial(pot);
-
-      const news = await fetch('/api/berita').then(r => r.json());
       setBeritaList(news);
-
-      const age = await fetch('/api/agenda').then(r => r.json());
       setAgendaList(age);
-
-      const users = await fetch('/api/users').then(r => r.json());
       setUserList(users);
-
-      const info = await fetch('/api/informasi').then(r => r.json());
       setInformasiList(info);
-
-      const sc = await fetch('/api/site_content').then(r => r.json());
       setSiteContent(sc);
+      
+      localStorage.setItem('admin_data_cache', JSON.stringify({ keca, saka, pot, news, age, users, info, sc }));
+
       const hero = sc.find((item: any) => item.section_key === 'hero');
       if (hero) {
         setHeroTitle(hero.content.title);

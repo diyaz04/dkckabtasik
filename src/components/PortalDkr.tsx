@@ -155,16 +155,51 @@ export default function PortalDkr() {
     if (!kecaString) return;
     const kecaObj = JSON.parse(kecaString) as Kecamatan;
 
+    const cacheKey = 'dkr_data_cache_' + kecaObj.id;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const c = JSON.parse(cached);
+        if (c.resData) {
+          setPersonalia(c.resData.personalia || []);
+          setPangkalan(c.resData.pangkalan || []);
+          setPotensialData(c.resData.data_potensial || null);
+          setAgenda(c.resData.agenda || []);
+          setProfile(c.resData.profile || null);
+          if (c.resData.profile) {
+            setDeskripsi(c.resData.profile.deskripsi || '');
+            setLogoUrl(c.resData.profile.logo_url || '');
+            setMedsosIg(c.resData.profile.medsos_ig || '');
+            setMedsosYt(c.resData.profile.medsos_yt || '');
+            setMedsosTk(c.resData.profile.medsos_tk || '');
+          }
+          if (c.resData.data_potensial) {
+            setPenegakL(c.resData.data_potensial.jumlah_penegak_l);
+            setPenegakP(c.resData.data_potensial.jumlah_penegak_p);
+            setPandegaL(c.resData.data_potensial.jumlah_pandega_l);
+            setPandegaP(c.resData.data_potensial.jumlah_pandega_p);
+          }
+        }
+        if (c.resBeritaData) setBerita(Array.isArray(c.resBeritaData) ? c.resBeritaData : (c.resData?.berita || []));
+        if (c.tagihanData) setTagihanCabangList(c.tagihanData);
+        if (c.activeData) setActiveAgendas(c.activeData);
+        if (c.lapData) setLaporanList(c.lapData);
+      } catch(e){}
+    }
+
     try {
-      // 1. Get detailed info of this kecamatan
-      const res = await fetch(`/api/kecamatan/${kecaObj.slug}`);
-      const resData = await res.json();
-      
+      setLaporanLoading(true);
+      const [resData, resBeritaData, tagihanData, agData, lapDataRaw] = await Promise.all([
+        fetch(`/api/kecamatan/${kecaObj.slug}`).then(r => r.json()),
+        fetch(`/api/berita?kecamatan_id=${kecaObj.id}`).then(r => r.json()),
+        fetch(`/api/tagihan_kolektif?kecamatan_id=${kecaObj.id}`).then(r => r.json()),
+        fetch('/api/agenda').then(r => r.json()),
+        fetch('/api/laporan_kegiatan').then(r => r.json())
+      ]);
+
       setPersonalia(resData.personalia || []);
       setPangkalan(resData.pangkalan || []);
       setPotensialData(resData.data_potensial || null);
-      const resBerita = await fetch(`/api/berita?kecamatan_id=${kecaObj.id}`);
-      const resBeritaData = await resBerita.json();
       setBerita(Array.isArray(resBeritaData) ? resBeritaData : (resData.berita || []));
       setAgenda(resData.agenda || []);
       
@@ -184,27 +219,15 @@ export default function PortalDkr() {
         setPandegaP(resData.data_potensial.jumlah_pandega_p);
       }
 
-      // Fetch Tagihan Kolektif Kwarran
-      const tagihanRes = await fetch(`/api/tagihan_kolektif?kecamatan_id=${kecaObj.id}`);
-      if (tagihanRes.ok) {
-        setTagihanCabangList(await tagihanRes.json());
-      }
-
-      // Fetch Agendas
-      const agendaRes = await fetch('/api/agenda');
-      if (agendaRes.ok) {
-        const agData = await agendaRes.json();
-        setActiveAgendas(agData.filter((a: any) => a.tipe_pendaftaran !== 'mandiri' && a.status_publikasi));
-      }
-
-      // Fetch Laporan Kegiatan
-      setLaporanLoading(true);
-      const lapRes = await fetch('/api/laporan_kegiatan');
-      if (lapRes.ok) {
-        const lapData = await lapRes.json();
-        setLaporanList(lapData.filter((l: any) => l.kecamatan_id === kecaObj.id));
-      }
+      setTagihanCabangList(tagihanData || []);
+      const activeData = agData.filter((a: any) => a.tipe_pendaftaran !== 'mandiri' && a.status_publikasi);
+      setActiveAgendas(activeData);
+      
+      const lapData = lapDataRaw.filter((l: any) => l.kecamatan_id === kecaObj.id);
+      setLaporanList(lapData);
       setLaporanLoading(false);
+
+      localStorage.setItem(cacheKey, JSON.stringify({ resData, resBeritaData, tagihanData, activeData, lapData }));
 
       // Fetch site settings
       const scRes = await fetch('/api/site_content');
