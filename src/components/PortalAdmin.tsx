@@ -2,10 +2,13 @@ import LaporanPdfTemplate from './LaporanPdfTemplate';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
 import { ensureCoreFields } from '../utils/coreFields';
 import SuratAdminPanel from './SuratAdminPanel';
+import FooterKontakEditor from './FooterKontakEditor';
+import SejarahDkcEditor from './SejarahDkcEditor';
+import PengumumanEditor from './PengumumanEditor';
 import VisibilityToggleCard from './VisibilityToggleCard';
 import { cacheKlasemenVisible } from '../utils/useKlasemenVisible';
 import { useSuratDkr } from '../utils/suratDkr';
-import { Mail as MailIcon, Key } from 'lucide-react';
+import { Mail as MailIcon, Key, Megaphone } from 'lucide-react';
 import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +30,7 @@ import GreetingBanner from './GreetingBanner';
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi' | 'surat'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'pengumuman' | 'laporan' | 'informasi' | 'surat'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { list: suratList, reload: reloadSurat } = useSuratDkr('admin');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1632,6 +1635,16 @@ export default function PortalAdmin() {
           >
             <Settings className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>Kelola Landingpage</span>}</button>
+
+          <button 
+            title={isSidebarCollapsed ? 'Pengumuman Landingpage' : ''} 
+            onClick={() => { setActiveTab('pengumuman'); setIsMobileMenuOpen(false); }}
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
+              activeTab === 'pengumuman' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
+            }`}
+          >
+            <Megaphone className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Pengumuman Landingpage</span>}</button>
 
           <button 
             title={isSidebarCollapsed ? 'Pusat Unduhan Berkas' : ''} 
@@ -3814,7 +3827,7 @@ export default function PortalAdmin() {
           <div className="space-y-8">
             <div className="border-b border-gray-200 pb-4">
               <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Kustomisasi Konten & Warna Landingpage</h1>
-              <p className="text-xs text-gray-500 font-mono mt-1">Sesuaikan informasi hero banner serta kelola warna tampilan landing page (baik manual maupun mendeteksi otomatis dari gambar).</p>
+              <p className="text-xs text-gray-500 font-mono mt-1">Sesuaikan informasi hero banner, warna tampilan, kontak footer, serta sejarah DKC dari masa ke masa.</p>
             </div>
 
             <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-sm">
@@ -4144,8 +4157,17 @@ export default function PortalAdmin() {
                 </div>
               </form>
             </div>
+
+            {/* Kontak footer (alamat, email, telp) */}
+            <FooterKontakEditor />
+
+            {/* Sejarah DKC dari masa ke masa (tampil di section profil landingpage) */}
+            <SejarahDkcEditor />
           </div>
         )}
+
+        {/* TAB: PENGUMUMAN LANDINGPAGE (section + popup promosi) */}
+        {activeTab === 'pengumuman' && <PengumumanEditor />}
 
         {/* DKC ADMIN TAB: PUSAT UNDUHAN BERKAS (INFORMASI) */}
         {activeTab === 'informasi' && (

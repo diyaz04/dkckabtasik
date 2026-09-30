@@ -15,9 +15,13 @@ import * as XLSX from 'xlsx';
 import BuktiPendaftaranPdfTemplate from './BuktiPendaftaranPdfTemplate';
 import { motion, AnimatePresence, useScroll, useVelocity, useTransform, useSpring, useMotionValue, useAnimationFrame } from 'motion/react';
 import InteractiveMap from './InteractiveMap';
+import SejarahDkcTimeline from './SejarahDkcTimeline';
+import PengumumanSection from './PengumumanSection';
+import PengumumanPopupHost from './PengumumanPopup';
+import { getActivePengumuman, parsePengumuman } from '../utils/pengumuman';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
-  Informasi, SiteContent, FormKegiatanConfig, DkcProfile, Saka
+  Informasi, SiteContent, FormKegiatanConfig, DkcProfile, Saka, SejarahDkcItem, PengumumanItem
 } from '../types';
 
 interface VelocityMarqueeProps {
@@ -284,6 +288,8 @@ export default function LandingPage() {
   const [kecamatanList, setKecamatanList] = useState<Kecamatan[]>([]);
   const [sakaList, setSakaList] = useState<Saka[]>([]);
   const [dkcProfile, setDkcProfile] = useState<DkcProfile | null>(null);
+  const [sejarahItems, setSejarahItems] = useState<SejarahDkcItem[]>([]);
+  const [pengumumanItems, setPengumumanItems] = useState<PengumumanItem[]>([]);
   const [dkcPersonalia, setDkcPersonalia] = useState<Personalia[]>([]);
   const [beritaList, setBeritaList] = useState<Berita[]>([]);
   const [agendaList, setAgendaList] = useState<AgendaKegiatan[]>([]);
@@ -397,6 +403,10 @@ export default function LandingPage() {
       const scData = await scRes.json();
       const hero = scData.find((item: any) => item.section_key === 'hero');
       if (hero) setHeroContent(hero.content);
+      const sejarah = scData.find((item: any) => item.section_key === 'sejarah_dkc');
+      setSejarahItems(Array.isArray(sejarah?.content?.items) ? sejarah.content.items : []);
+      const pengumuman = scData.find((item: any) => item.section_key === 'pengumuman');
+      setPengumumanItems(parsePengumuman(pengumuman?.content));
 
       const theme = scData.find((item: any) => item.section_key === 'theme');
       if (theme && theme.content) {
@@ -877,6 +887,8 @@ export default function LandingPage() {
     return true;
   });
 
+  const pengumumanAktif = useMemo(() => getActivePengumuman(pengumumanItems), [pengumumanItems]);
+
   const displayHero = {
     title: heroContent?.title || 'Dewan Kerja Cabang',
     subtitle: heroContent?.subtitle || 'Kabupaten Tasikmalaya',
@@ -991,6 +1003,16 @@ export default function LandingPage() {
         </div>
       </OverlappingSection>
 
+      {/* 1.5. PENGUMUMAN (kelola di dashboard > Pengumuman Landingpage) */}
+      {pengumumanAktif.length > 0 && (
+        <OverlappingSection id="pengumuman" className="bg-white py-20 px-4 sm:px-6 lg:px-8">
+          <PengumumanSection items={pengumumanAktif} />
+        </OverlappingSection>
+      )}
+
+      {/* Popup promosi pengumuman (opsional per pengumuman) */}
+      <PengumumanPopupHost items={pengumumanItems} />
+
       {/* 2. VISI & MISI SECTION - Overlapping Layout */}
       <OverlappingSection id="profil" className="bg-gray-50 py-20 px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
@@ -1035,6 +1057,9 @@ export default function LandingPage() {
           </div>
 
         </div>
+
+        {/* Sejarah DKC dari masa ke masa (kelola di dashboard > Kelola Landingpage) */}
+        <SejarahDkcTimeline items={sejarahItems} />
       </OverlappingSection>
 
       {/* 3. STRUKTUR PERSONALIA SECTION - Overlapping Layout */}

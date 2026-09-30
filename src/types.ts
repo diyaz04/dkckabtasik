@@ -237,3 +237,28 @@ export interface SuratDkr {
   created_at: string;
   updated_at: string;
 }
+
+// Sejarah DKC (disimpan di site_content, section_key = 'sejarah_dkc', content.items)
+// Urutan array = urutan kronologis (paling lama di atas/awal).
+export interface SejarahDkcItem {
+  id: string;
+  nama: string;
+  foto_url: string;
+  masa_bakti: string;
+  deskripsi: string;
+}
+
+// Pengumuman landing page (site_content, section_key = 'pengumuman', content.items)
+// Urutan array = urutan tampil (paling atas = paling depan).
+export interface PengumumanItem {
+  id: string;
+  judul: string;
+  isi: string;
+  gambar_url: string;
+  tombol_teks: string;
+  tombol_link: string;
+  berlaku_sampai: string; // 'YYYY-MM-DD' atau '' (tanpa batas)
+  aktif: boolean;         // tampil di section Pengumuman
+  popup: boolean;         // ikut dimunculkan sebagai popup promosi
+  dibuat: string;         // ISO date
+}

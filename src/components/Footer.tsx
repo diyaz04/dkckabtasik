@@ -1,10 +1,18 @@
 import { Compass, Mail, Phone, MapPin, Youtube, Instagram, Award } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
+// Default kontak sekretariat (dipakai kalau admin belum mengisi di Kelola Landingpage)
+export const DEFAULT_KONTAK = {
+  alamat: 'Jl. Pemuda No. 12, Singaparna, Kabupaten Tasikmalaya, Jawa Barat, 46411',
+  email: 'info@dkctasikmalaya.org',
+  telp: '0265-123456 (Sekretariat DKC)',
+};
+
 export default function Footer() {
   const [medsosIg, setMedsosIg] = useState('https://instagram.com');
   const [medsosYt, setMedsosYt] = useState('https://youtube.com');
   const [medsosTk, setMedsosTk] = useState('https://tiktok.com');
+  const [kontak, setKontak] = useState({ ...DEFAULT_KONTAK });
 
   useEffect(() => {
     fetch('/api/site_content')
@@ -16,6 +24,16 @@ export default function Footer() {
           if (medsos.content.instagram || medsos.content.ig) setMedsosIg(medsos.content.instagram || medsos.content.ig);
           if (medsos.content.youtube || medsos.content.yt) setMedsosYt(medsos.content.youtube || medsos.content.yt);
           if (medsos.content.tiktok || medsos.content.tk) setMedsosTk(medsos.content.tiktok || medsos.content.tk);
+        }
+        const kontakSc = sc.find(item => item.section_key === 'footer_dkc');
+        if (kontakSc && kontakSc.content) {
+          const c = kontakSc.content;
+          // Field yang dikosongkan admin -> fallback ke default supaya footer tidak bolong
+          setKontak({
+            alamat: (c.alamat || '').trim() || DEFAULT_KONTAK.alamat,
+            email: (c.email || '').trim() || DEFAULT_KONTAK.email,
+            telp: (c.telp || '').trim() || DEFAULT_KONTAK.telp,
+          });
         }
       })
       .catch(() => {});
@@ -68,15 +86,15 @@ export default function Footer() {
           <ul className="space-y-4 text-sm text-gray-300">
             <li className="flex items-start space-x-3">
               <MapPin className="w-5 h-5 text-brand-orange shrink-0 mt-0.5" />
-              <span>Jl. Pemuda No. 12, Singaparna, Kabupaten Tasikmalaya, Jawa Barat, 46411</span>
+              <span className="whitespace-pre-line">{kontak.alamat}</span>
             </li>
             <li className="flex items-center space-x-3">
               <Mail className="w-5 h-5 text-brand-green shrink-0" />
-              <a href="mailto:info@dkctasikmalaya.org" className="hover:text-brand-orange transition-colors">info@dkctasikmalaya.org</a>
+              <a href={`mailto:${kontak.email}`} className="hover:text-brand-orange transition-colors break-all">{kontak.email}</a>
             </li>
             <li className="flex items-center space-x-3">
               <Phone className="w-5 h-5 text-brand-teal shrink-0" />
-              <span>0265-123456 (Sekretariat DKC)</span>
+              <a href={`tel:${kontak.telp.replace(/[^\d+]/g, '')}`} className="hover:text-brand-orange transition-colors">{kontak.telp}</a>
             </li>
           </ul>
         </div>
