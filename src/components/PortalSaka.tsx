@@ -409,11 +409,8 @@ export default function PortalSaka() {
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.user_id,
-          newPassword
-        })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('dkc_token') || ''}` },
+        body: JSON.stringify({ oldPassword, newPassword })
       });
 
       const data = await res.json();

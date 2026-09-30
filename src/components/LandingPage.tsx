@@ -133,16 +133,23 @@ const PromoPopup = ({ beritaList, agendaList, themeColors, setKegiatanSubTab }: 
   }, [activeAgendas.length, recentBerita.length]);
 
   useEffect(() => {
-    
+    // Popup promo cuma tampil sekali per sesi (awal buka website), bukan tiap balik ke landing page
+    let alreadySeen = false;
+    try { alreadySeen = sessionStorage.getItem('hasSeenPromo_v3') === 'true'; } catch {}
+    if (alreadySeen) return;
+
     if (recentBerita.length > 0 || activeAgendas.length > 0) {
-      const timer = setTimeout(() => setIsVisible(true), 1500);
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+        try { sessionStorage.setItem('hasSeenPromo_v3', 'true'); } catch {}
+      }, 1500);
       return () => clearTimeout(timer);
     }
   }, [recentBerita.length, activeAgendas.length]);
 
   const handleClose = () => {
     setIsVisible(false);
-    sessionStorage.setItem('hasSeenPromo_v3', 'true');
+    try { sessionStorage.setItem('hasSeenPromo_v3', 'true'); } catch {}
   };
 
   const calculateCountdown = (targetDateStr: string) => {

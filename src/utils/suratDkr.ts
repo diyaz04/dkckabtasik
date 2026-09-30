@@ -48,9 +48,29 @@ export const formatTanggal = (iso?: string | null, withTime = false) => {
 
 const POLL_MS = 30000;
 
+// Surat yang sudah pernah dimunculkan popup-nya di sesi login ini (admin).
+// Kuncinya ikut token login, jadi login baru = sesi baru = popup muncul lagi untuk surat yang masih belum dibuka.
+const notifiedKey = () => {
+  let token = '';
+  try { token = localStorage.getItem('dkc_token') || ''; } catch {}
+  return `surat_dkr_notified:${token.slice(-16)}`;
+};
+const loadNotified = (): Set<string> => {
+  try {
+    const raw = sessionStorage.getItem(notifiedKey());
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+};
+const saveNotified = (ids: Set<string>) => {
+  try { sessionStorage.setItem(notifiedKey(), JSON.stringify([...ids])); } catch {}
+};
+
 /**
  * Ambil daftar surat + polling tiap 30 detik (dan saat tab dibuka lagi).
- * mode 'admin' → semua surat, popup saat ada surat baru dari DKR
+ * mode 'admin' → semua surat, popup untuk surat yang belum dibuka (status 'terkirim'):
+ *                 sekali per sesi login; hilang untuk selamanya begitu suratnya dibuka
  * mode 'dkr'   → hanya surat kecamatan tsb, popup saat status surat berubah
  */
 export function useSuratDkr(mode: 'admin' | 'dkr', kecamatanId?: string) {
@@ -67,16 +87,24 @@ export function useSuratDkr(mode: 'admin' | 'dkr', kecamatanId?: string) {
       const data = await res.json();
       if (!Array.isArray(data)) return;
 
+      if (mode === 'admin') {
+        const unread = (data as SuratDkr[]).filter((s) => s.status === 'terkirim');
+        const notified = loadNotified();
+        const fresh = unread.filter((s) => !notified.has(s.id));
+        if (fresh.length > 0) {
+          fresh.forEach((s) => notified.add(s.id));
+          saveNotified(notified);
+          if (fresh.length === 1) {
+            showAlert(`Surat baru dari DKR ${fresh[0].kecamatan_nama}\nPerihal: ${fresh[0].perihal}\n\nBuka menu Surat Masuk DKR untuk membacanya.`, 'info');
+          } else {
+            showAlert(`Ada ${fresh.length} surat dari DKR yang belum dibuka. Cek menu Surat Masuk DKR.`, 'info');
+          }
+        }
+      }
+
       const prev = snapshot.current;
       if (prev) {
-        if (mode === 'admin') {
-          const fresh = (data as SuratDkr[]).filter((s) => !prev.has(s.id));
-          if (fresh.length === 1) {
-            showAlert(`Surat baru dari DKR ${fresh[0].kecamatan_nama}\nPerihal: ${fresh[0].perihal}`, 'info');
-          } else if (fresh.length > 1) {
-            showAlert(`${fresh.length} surat baru masuk dari DKR. Cek menu Surat Masuk DKR.`, 'info');
-          }
-        } else {
+        if (mode === 'dkr') {
           const changed = (data as SuratDkr[]).filter((s) => prev.has(s.id) && prev.get(s.id) !== s.status);
           if (changed.length === 1) {
             showAlert(`Surat "${changed[0].perihal}" kini berstatus: ${SURAT_STATUS[changed[0].status]?.label || changed[0].status}`, 'info');

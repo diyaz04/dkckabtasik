@@ -110,8 +110,33 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
 app.post('/api/auth/change-password', async (req: Request, res: Response) => {
   try {
-    const { newPassword } = req.body;
-    const { error } = await supabaseAdmin.auth.updateUser({ password: newPassword });
+    if (!supabaseAdmin) return res.status(500).json({ error: 'Supabase belum dikonfigurasi' });
+
+    // Identitas diambil dari token login (bukan dari body) supaya tidak bisa ganti password orang lain
+    const authHeader = String(req.headers.authorization || '');
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    if (!token) return res.status(401).json({ error: 'Sesi login tidak ditemukan. Silakan login ulang.' });
+
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const authUser = userData?.user;
+    if (userError || !authUser) {
+      return res.status(401).json({ error: 'Sesi login sudah berakhir. Silakan login ulang.' });
+    }
+
+    const { newPassword, oldPassword } = req.body || {};
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+    }
+
+    // Kalau form mengirim password lama, wajib cocok
+    if (oldPassword !== undefined && oldPassword !== null && oldPassword !== '') {
+      if (!authUser.email) return res.status(400).json({ error: 'Akun tidak punya email untuk verifikasi password lama' });
+      const verifier = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } });
+      const { error: verifyError } = await verifier.auth.signInWithPassword({ email: authUser.email, password: String(oldPassword) });
+      if (verifyError) return res.status(400).json({ error: 'Password lama salah' });
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(authUser.id, { password: newPassword });
     if (error) return res.status(400).json({ error: error.message });
     res.json({ success: true, message: 'Password berhasil diperbarui' });
   } catch (error: any) {

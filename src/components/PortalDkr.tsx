@@ -260,8 +260,8 @@ export default function PortalDkr() {
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.user_id, newPassword })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('dkc_token') || ''}` },
+        body: JSON.stringify({ newPassword })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -740,20 +740,21 @@ export default function PortalDkr() {
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.user_id,
-          newPassword
-        })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('dkc_token') || ''}` },
+        body: JSON.stringify({ oldPassword, newPassword })
       });
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         alert('Password portal internal berhasil diperbarui!');
         setNewPassword('');
         setOldPassword('');
+      } else {
+        alert(data.error || 'Gagal mengubah password');
       }
     } catch (e) {
       console.error(e);
+      alert('Gagal mengubah password. Periksa koneksi lalu coba lagi.');
     } finally {
       setPasswordSaving(false);
     }
@@ -941,7 +942,7 @@ export default function PortalDkr() {
 
           {/* Kategori: PUBLIKASI & KEGIATAN */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
-            {isSidebarCollapsed ? '•' : 'Publikasi &amp; Kegiatan'}
+            {isSidebarCollapsed ? '•' : 'Publikasi & Kegiatan'}
           </p>
           <button 
             title={isSidebarCollapsed ? 'Ajukan Berita' : ''}
@@ -995,7 +996,7 @@ export default function PortalDkr() {
 
           {/* Kategori: LAPORAN & AKUN */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
-            {isSidebarCollapsed ? '•' : 'Laporan &amp; Akun'}
+            {isSidebarCollapsed ? '•' : 'Laporan & Akun'}
           </p>
           {showLaporanMenu && (
             <button 

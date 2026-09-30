@@ -531,8 +531,8 @@ export default function PortalAdmin() {
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.user_id, newPassword })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('dkc_token') || ''}` },
+        body: JSON.stringify({ newPassword })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -1574,7 +1574,7 @@ export default function PortalAdmin() {
 
           {/* Kategori: KONTEN & PUBLIKASI */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
-            {isSidebarCollapsed ? '•' : 'Konten &amp; Publikasi'}
+            {isSidebarCollapsed ? '•' : 'Konten & Publikasi'}
           </p>
           <button 
             title={isSidebarCollapsed ? 'Persetujuan Warta' : ''} 
