@@ -172,6 +172,8 @@ create table if not exists agenda_kegiatan (
   bulan_rencana text,                   -- format 'YYYY-MM'
   is_camp_fee_required boolean not null default false,
   camp_fee numeric default 0,
+  juknis_url text,                      -- file juknis (Uploadcare), opsional
+  surat_edaran_url text,                -- file surat edaran (Uploadcare), opsional
   dashboard_config jsonb
 );
 

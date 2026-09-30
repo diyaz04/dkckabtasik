@@ -47,6 +47,11 @@ export default function PortalAdmin() {
   const [userList, setUserList] = useState<any[]>([]);
   const [siteContent, setSiteContent] = useState<SiteContent[]>([]);
   const [pangkalanList, setPangkalanList] = useState<any[]>([]);
+  const [togglingAgendaId, setTogglingAgendaId] = useState<string | null>(null);
+  const HAPUS_KEGIATAN_PHRASE = 'hapus kegiatan ini sekarang';
+  const [agendaToDelete, setAgendaToDelete] = useState<AgendaKegiatan | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAgenda, setIsDeletingAgenda] = useState(false);
 
   // Daftar Pangkalan/Gudep (admin) — tabel bertingkat per kwaran
   const [expandedKwarranPk, setExpandedKwarranPk] = useState<string[]>([]);
@@ -191,6 +196,11 @@ export default function PortalAdmin() {
   const [agendaBulanRencana, setAgendaBulanRencana] = useState('2026-08');
   const [agendaLogoUrl, setAgendaLogoUrl] = useState('');
   const [agendaLogoUploading, setAgendaLogoUploading] = useState(false);
+  const [agendaJuknisUrl, setAgendaJuknisUrl] = useState('');
+  const [agendaJuknisName, setAgendaJuknisName] = useState('');
+  const [agendaSuratEdaranUrl, setAgendaSuratEdaranUrl] = useState('');
+  const [agendaSuratEdaranName, setAgendaSuratEdaranName] = useState('');
+  const [agendaDocUploading, setAgendaDocUploading] = useState<null | 'juknis' | 'surat_edaran'>(null);
   const [agendaIsCampFee, setAgendaIsCampFee] = useState(false);
   const [agendaCampFee, setAgendaCampFee] = useState(0);
   const [agendaSaving, setAgendaSaving] = useState(false);
@@ -777,6 +787,34 @@ export default function PortalAdmin() {
     }
   };
 
+  // Upload Juknis / Surat Edaran kegiatan ke Uploadcare (opsional)
+  const handleAgendaDocUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'juknis' | 'surat_edaran') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAgendaDocUploading(target);
+    try {
+      const url = await compressAndUploadToUploadcare(file);
+      if (target === 'juknis') {
+        setAgendaJuknisUrl(url);
+        setAgendaJuknisName(file.name);
+      } else {
+        setAgendaSuratEdaranUrl(url);
+        setAgendaSuratEdaranName(file.name);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Gagal mengunggah berkas ke Uploadcare. Coba lagi ya bro.');
+    } finally {
+      setAgendaDocUploading(null);
+      e.target.value = '';
+    }
+  };
+
+  const clearAgendaDoc = (target: 'juknis' | 'surat_edaran') => {
+    if (target === 'juknis') { setAgendaJuknisUrl(''); setAgendaJuknisName(''); }
+    else { setAgendaSuratEdaranUrl(''); setAgendaSuratEdaranName(''); }
+  };
+
   // Create Agenda
   const handleSaveAgenda = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -802,6 +840,8 @@ export default function PortalAdmin() {
           is_tanggal_diputuskan: agendaIsDateDecided,
           bulan_rencana: agendaBulanRencana,
           logo_url: agendaLogoUrl,
+          juknis_url: agendaJuknisUrl || null,
+          surat_edaran_url: agendaSuratEdaranUrl || null,
           camp_fee: agendaIsCampFee ? agendaCampFee : 0,
           is_camp_fee_required: agendaIsCampFee
         })
@@ -815,6 +855,10 @@ export default function PortalAdmin() {
         setAgendaEst(100);
         setAgendaIsDateDecided(true);
         setAgendaLogoUrl('');
+        setAgendaJuknisUrl('');
+        setAgendaJuknisName('');
+        setAgendaSuratEdaranUrl('');
+        setAgendaSuratEdaranName('');
         setAgendaIsCampFee(false);
         setAgendaCampFee(0);
         alert('Agenda kegiatan berhasil ditambahkan!');
@@ -827,20 +871,40 @@ export default function PortalAdmin() {
     }
   };
 
-  // Delete Agenda
-  const handleDeleteAgenda = async (id: string) => {
-    if (!await showConfirm('Apakah Anda yakin ingin menghapus agenda kegiatan ini? Semua data pendaftaran terkait juga akan dihapus.')) return;
+  // Delete Agenda (butuh ketik frasa konfirmasi persis lewat popup)
+  const openDeleteAgendaModal = (agenda: AgendaKegiatan) => {
+    setDeleteConfirmText('');
+    setAgendaToDelete(agenda);
+  };
+
+  const closeDeleteAgendaModal = () => {
+    if (isDeletingAgenda) return;
+    setAgendaToDelete(null);
+    setDeleteConfirmText('');
+  };
+
+  const handleDeleteAgenda = async () => {
+    if (!agendaToDelete || deleteConfirmText !== HAPUS_KEGIATAN_PHRASE || isDeletingAgenda) return;
+    setIsDeletingAgenda(true);
     try {
       const res = await fetch('/api/agenda/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id: agendaToDelete.id })
       });
-      if (res.ok) {
-        loadData();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Terjadi kesalahan');
       }
-    } catch (e) {
+      setAgendaToDelete(null);
+      setDeleteConfirmText('');
+      loadData();
+      alert('Kegiatan berhasil dihapus.');
+    } catch (e: any) {
       console.error(e);
+      alert('Gagal menghapus kegiatan: ' + (e.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsDeletingAgenda(false);
     }
   };
 
@@ -1007,22 +1071,28 @@ export default function PortalAdmin() {
     }
   };
 
-  // Toggle Pendaftaran Aktif
+  // Toggle Pendaftaran Aktif (optimistic: switch langsung bergeser, rollback jika gagal)
   const handleTogglePendaftaran = async (agenda: AgendaKegiatan) => {
+    if (togglingAgendaId === agenda.id) return;
+    const next = !agenda.is_aktif_pendaftaran;
+    setTogglingAgendaId(agenda.id);
+    setAgendaList(prev => prev.map(a => a.id === agenda.id ? { ...a, is_aktif_pendaftaran: next } : a));
     try {
       const res = await fetch('/api/agenda/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...agenda,
-          is_aktif_pendaftaran: !agenda.is_aktif_pendaftaran
+          is_aktif_pendaftaran: next
         })
       });
-      if (res.ok) {
-        loadData();
-      }
+      if (!res.ok) throw new Error('Gagal menyimpan status pendaftaran');
     } catch (e) {
       console.error(e);
+      setAgendaList(prev => prev.map(a => a.id === agenda.id ? { ...a, is_aktif_pendaftaran: !next } : a));
+      alert('Gagal mengubah status pendaftaran. Coba lagi.');
+    } finally {
+      setTogglingAgendaId(null);
     }
   };
 
@@ -3094,6 +3164,46 @@ export default function PortalAdmin() {
                   </div>
 
                   <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Juknis (Opsional, PDF/Word)</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        disabled={agendaDocUploading !== null}
+                        onChange={(e) => handleAgendaDocUpload(e, 'juknis')}
+                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-[10px] text-gray-500 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200 disabled:opacity-60"
+                      />
+                      {agendaDocUploading === 'juknis' && <span className="text-[10px] text-brand-orange animate-pulse whitespace-nowrap">Uploading...</span>}
+                    </div>
+                    {agendaJuknisUrl && agendaDocUploading !== 'juknis' && (
+                      <p className="mt-1.5 flex items-center gap-2 text-[10px] text-brand-green">
+                        <span className="truncate">✓ Tersimpan di Uploadcare{agendaJuknisName ? `: ${agendaJuknisName}` : ''}</span>
+                        <button type="button" onClick={() => clearAgendaDoc('juknis')} className="text-red-500 hover:underline shrink-0 cursor-pointer">Hapus</button>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Surat Edaran (Opsional, PDF/Word)</label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        disabled={agendaDocUploading !== null}
+                        onChange={(e) => handleAgendaDocUpload(e, 'surat_edaran')}
+                        className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-[10px] text-gray-500 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200 disabled:opacity-60"
+                      />
+                      {agendaDocUploading === 'surat_edaran' && <span className="text-[10px] text-brand-orange animate-pulse whitespace-nowrap">Uploading...</span>}
+                    </div>
+                    {agendaSuratEdaranUrl && agendaDocUploading !== 'surat_edaran' && (
+                      <p className="mt-1.5 flex items-center gap-2 text-[10px] text-brand-green">
+                        <span className="truncate">✓ Tersimpan di Uploadcare{agendaSuratEdaranName ? `: ${agendaSuratEdaranName}` : ''}</span>
+                        <button type="button" onClick={() => clearAgendaDoc('surat_edaran')} className="text-red-500 hover:underline shrink-0 cursor-pointer">Hapus</button>
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tempat</label>
                     <input 
                       type="text" required value={agendaPlace} onChange={(e) => setAgendaPlace(e.target.value)}
@@ -3254,16 +3364,29 @@ export default function PortalAdmin() {
                         {/* Control buttons */}
                         <div className="flex flex-wrap gap-2 shrink-0">
                           {/* Toggle active registration */}
-                          <button
-                            onClick={() => handleTogglePendaftaran(a)}
-                            className={`p-2 rounded-xl border flex items-center gap-1 font-bold text-[10px] transition-all cursor-pointer ${
-                              a.is_aktif_pendaftaran 
-                                ? 'bg-brand-green/10 text-brand-green border-brand-green/20'
-                                : 'bg-gray-200 text-gray-500 border-gray-300'
-                            }`}
-                          >
-                            {a.is_aktif_pendaftaran ? 'PENDAFTARAN AKTIF' : 'PENDAFTARAN NONAKTIF'}
-                          </button>
+                          <div className="flex items-center gap-2.5 pr-1">
+                            <span className={`text-[10px] font-black uppercase tracking-wider min-w-[82px] text-right ${
+                              a.is_aktif_pendaftaran ? 'text-[#0E9F6E]' : 'text-gray-500'
+                            }`}>
+                              {togglingAgendaId === a.id ? 'Menyimpan...' : a.is_aktif_pendaftaran ? 'Pendaftaran Buka' : 'Pendaftaran Tutup'}
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={!!a.is_aktif_pendaftaran}
+                              aria-label={`Pendaftaran ${a.nama_kegiatan}`}
+                              title={a.is_aktif_pendaftaran ? 'Klik untuk menutup pendaftaran' : 'Klik untuk membuka pendaftaran'}
+                              disabled={togglingAgendaId === a.id}
+                              onClick={() => handleTogglePendaftaran(a)}
+                              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-4 focus-visible:ring-[#0E9F6E]/30 disabled:opacity-60 disabled:cursor-wait ${
+                                a.is_aktif_pendaftaran ? 'bg-[#0E9F6E]' : 'bg-gray-300'
+                              }`}
+                            >
+                              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                                a.is_aktif_pendaftaran ? 'translate-x-[22px]' : 'translate-x-0.5'
+                              }`} />
+                            </button>
+                          </div>
 
                           {/* Open Form Config Builder */}
                           <button
@@ -3281,7 +3404,7 @@ export default function PortalAdmin() {
                           </button>
 
                           <button
-                            onClick={() => handleDeleteAgenda(a.id)}
+                            onClick={() => openDeleteAgendaModal(a)}
                             className="bg-brand-red/15 text-brand-red border border-brand-red/20 hover:bg-brand-red/25 p-2 rounded-xl cursor-pointer"
                           >
                             <Trash className="w-4 h-4" />
@@ -4639,6 +4762,69 @@ export default function PortalAdmin() {
         </div>
       </div>
       
+      {/* Popup konfirmasi hapus kegiatan (wajib ketik frasa persis) */}
+      {agendaToDelete && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          onClick={closeDeleteAgendaModal}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto w-16 h-16 rounded-full border bg-red-50 border-red-100 flex items-center justify-center mb-4">
+              <Trash className="w-8 h-8 text-red-500" />
+            </div>
+            <h3 className="text-center font-extrabold text-lg text-slate-900 tracking-tight">Hapus Kegiatan Permanen</h3>
+            <p className="text-sm text-slate-600 mt-2 leading-relaxed text-center">
+              Kegiatan <span className="font-bold text-slate-900">"{agendaToDelete.nama_kegiatan}"</span> beserta semua data pendaftaran terkait akan dihapus dan <span className="font-bold text-red-600">tidak bisa dikembalikan</span>.
+            </p>
+            <label className="block mt-5 text-xs text-slate-600">
+              Ketik <span className="font-mono font-bold text-red-600 select-none">{HAPUS_KEGIATAN_PHRASE}</span> untuk mengaktifkan tombol hapus:
+              <input
+                type="text"
+                autoFocus
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && deleteConfirmText === HAPUS_KEGIATAN_PHRASE) handleDeleteAgenda();
+                  if (e.key === 'Escape') closeDeleteAgendaModal();
+                }}
+                disabled={isDeletingAgenda}
+                placeholder={HAPUS_KEGIATAN_PHRASE}
+                className={`mt-2 w-full px-4 py-2.5 rounded-xl border font-mono text-sm outline-none transition-colors ${
+                  deleteConfirmText === HAPUS_KEGIATAN_PHRASE
+                    ? 'border-emerald-400 bg-emerald-50 focus:ring-2 focus:ring-emerald-200'
+                    : 'border-slate-200 focus:border-red-400 focus:ring-2 focus:ring-red-100'
+                }`}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <button
+                type="button"
+                onClick={closeDeleteAgendaModal}
+                disabled={isDeletingAgenda}
+                className="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-colors cursor-pointer disabled:opacity-60"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAgenda}
+                disabled={deleteConfirmText !== HAPUS_KEGIATAN_PHRASE || isDeletingAgenda}
+                className="py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-md transition-colors cursor-pointer disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none disabled:cursor-not-allowed"
+              >
+                {isDeletingAgenda ? 'Menghapus...' : 'Hapus Kegiatan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
   );
 }

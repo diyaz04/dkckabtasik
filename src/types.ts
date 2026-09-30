@@ -125,6 +125,8 @@ export interface AgendaKegiatan {
   nama_kegiatan: string;
   tempat: string;
   logo_url?: string;
+  juknis_url?: string | null;
+  surat_edaran_url?: string | null;
   tanggal_mulai: string;
   tanggal_selesai: string;
   estimasi_peserta: number;

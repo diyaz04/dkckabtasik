@@ -1955,6 +1955,32 @@ export default function LandingPage() {
                 <h3 className="font-extrabold text-lg text-brand-brown-dark tracking-tight leading-snug">
                   {selectedAgenda.nama_kegiatan}
                 </h3>
+                {(selectedAgenda.juknis_url || selectedAgenda.surat_edaran_url) && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {selectedAgenda.juknis_url && (
+                      <a
+                        href={selectedAgenda.juknis_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="bg-brand-green/10 text-brand-green hover:bg-brand-green/20 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors"
+                      >
+                        <Download className="w-4 h-4" /> Download Juknis
+                      </a>
+                    )}
+                    {selectedAgenda.surat_edaran_url && (
+                      <a
+                        href={selectedAgenda.surat_edaran_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="bg-brand-orange/10 text-brand-orange hover:bg-brand-orange/20 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors"
+                      >
+                        <Download className="w-4 h-4" /> Download Surat Edaran
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
 
               {registerSuccess ? (
