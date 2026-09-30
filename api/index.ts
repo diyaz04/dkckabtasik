@@ -573,6 +573,35 @@ app.post('/api/pangkalan/save', async (req: Request, res: Response) => {
   }
 });
 
+// Form pendaftaran: user boleh menambahkan pangkalan baru secara mandiri (dedupe per kwaran)
+app.post('/api/pangkalan/register', async (req: Request, res: Response) => {
+  try {
+    const kecamatan_id = String(req.body?.kecamatan_id || '').trim();
+    const nama = String(req.body?.nama_pangkalan || '').replace(/\s+/g, ' ').trim();
+    if (!kecamatan_id || !nama) {
+      return res.status(400).json({ error: 'kecamatan_id dan nama_pangkalan wajib diisi' });
+    }
+    if (nama.length > 120) {
+      return res.status(400).json({ error: 'Nama pangkalan terlalu panjang' });
+    }
+    const { data: existing } = await supabaseAdmin.from('pangkalan').select('*').eq('kecamatan_id', kecamatan_id);
+    const found = (existing || []).find((p: any) =>
+      String(p.nama_pangkalan || '').replace(/\s+/g, ' ').trim().toLowerCase() === nama.toLowerCase()
+    );
+    if (found) return res.json({ pangkalan: found, created: false });
+
+    const { data, error } = await supabaseAdmin
+      .from('pangkalan')
+      .insert({ kecamatan_id, nama_pangkalan: nama, jenis: 'lainnya', status_aktif: true })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ pangkalan: data, created: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/pangkalan/delete', async (req: Request, res: Response) => {
   try {
     const { id } = req.body;
@@ -773,11 +802,122 @@ app.post('/api/agenda/delete', async (req: Request, res: Response) => {
   }
 });
 
+// ── Field inti pendaftaran & deteksi pendaftar ganda ──
+// (logika sama dengan src/utils/coreFields.ts — sengaja diduplikasi agar function serverless tidak bergantung ke folder src)
+const CORE_FORM_FIELDS = [
+  { id: 'nama_lengkap', label: 'Nama Lengkap', type: 'text', required: true, locked: true },
+  { id: 'kwarran_asal', label: 'Kwartir Ranting Asal', type: 'select', required: true, locked: true, auto: true },
+  { id: 'pangkalan', label: 'Pangkalan / Gudep', type: 'pangkalan', required: true, locked: true },
+  { id: 'tempat_lahir', label: 'Tempat Lahir', type: 'text', required: true, locked: true },
+  { id: 'tanggal_lahir', label: 'Tanggal Lahir', type: 'date', required: true, locked: true },
+];
+const CORE_FORM_FIELD_IDS = CORE_FORM_FIELDS.map(f => f.id);
+
+function ensureCoreFormFields(schema: any): any[] {
+  const custom = (Array.isArray(schema) ? schema : []).filter((f: any) => f && !CORE_FORM_FIELD_IDS.includes(f.id));
+  return [...CORE_FORM_FIELDS.map(f => ({ ...f })), ...custom];
+}
+
+const cleanText = (v: any) => String(v ?? '').replace(/\s+/g, ' ').trim();
+const normText = (v: any) => cleanText(v).toLowerCase();
+
+function normDate(v: any): string {
+  if (v === null || v === undefined || v === '') return '';
+  let y: number, m: number, d: number;
+  if (typeof v === 'number' || /^\d{5}(\.\d+)?$/.test(String(v).trim())) {
+    const dt = new Date(Date.UTC(1899, 11, 30) + Math.floor(Number(v)) * 86400000);
+    y = dt.getUTCFullYear(); m = dt.getUTCMonth() + 1; d = dt.getUTCDate();
+  } else {
+    const str = String(v).trim();
+    let mt = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (mt) { y = +mt[1]; m = +mt[2]; d = +mt[3]; }
+    else {
+      mt = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+      if (!mt) return '';
+      d = +mt[1]; m = +mt[2]; y = +mt[3];
+    }
+  }
+  const check = new Date(Date.UTC(y, m - 1, d));
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d || y < 1900) return '';
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+const todayJakarta = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+
+// Kunci identitas: nama + kwaran + pangkalan + tempat lahir + tanggal lahir. Null jika ada yang kosong.
+function identityKey(d: any, kecamatanId: string | null): string | null {
+  if (!d || !kecamatanId) return null;
+  const nama = normText(d.nama_lengkap);
+  const pangkalan = normText(d.pangkalan);
+  const tempat = normText(d.tempat_lahir);
+  const tgl = normDate(d.tanggal_lahir);
+  if (!nama || !pangkalan || !tempat || !tgl) return null;
+  return [nama, kecamatanId, pangkalan, tempat, tgl].join('|');
+}
+
+// Validasi + rapikan field inti, isi kwarran_asal otomatis dari kecamatan_id
+async function prepareRegistrant(raw: any, kecamatanId: string | null): Promise<{ data?: any; error?: string }> {
+  if (!kecamatanId) return { error: 'Asal Kwartir Ranting wajib dipilih.' };
+  if (!raw || typeof raw !== 'object') return { error: 'Data peserta tidak valid.' };
+  const { data: keca } = await supabaseAdmin.from('kecamatan').select('nama_kecamatan').eq('id', kecamatanId).maybeSingle();
+  if (!keca) return { error: 'Kwartir Ranting tidak ditemukan.' };
+
+  const data: any = { ...raw };
+  data.nama_lengkap = cleanText(data.nama_lengkap);
+  data.pangkalan = cleanText(data.pangkalan);
+  data.tempat_lahir = cleanText(data.tempat_lahir);
+  data.tanggal_lahir = normDate(data.tanggal_lahir);
+  data.kwarran_asal = keca.nama_kecamatan;
+
+  if (!data.nama_lengkap) return { error: 'Nama Lengkap wajib diisi.' };
+  if (!data.pangkalan) return { error: 'Pangkalan / Gudep wajib diisi.' };
+  if (!data.tempat_lahir) return { error: 'Tempat Lahir wajib diisi.' };
+  if (!data.tanggal_lahir) return { error: 'Tanggal Lahir wajib diisi dengan format tanggal yang valid.' };
+  if (data.tanggal_lahir > todayJakarta()) return { error: 'Tanggal Lahir tidak boleh di masa depan.' };
+  return { data };
+}
+
+type DupInfo = { index: number; nama: string; reason: 'sudah_terdaftar' | 'ganda_dalam_daftar'; dengan?: number };
+
+// Cek peserta ganda terhadap data yang sudah ada di kegiatan ini + antar peserta dalam satu kiriman
+async function findDuplicates(agendaId: string, kecamatanId: string, list: any[], excludeId?: string): Promise<DupInfo[]> {
+  const { data: existing } = await supabaseAdmin
+    .from('pendaftaran_peserta').select('id, data_peserta')
+    .eq('agenda_id', agendaId).eq('kecamatan_id', kecamatanId);
+  const existingKeys = new Set<string>();
+  (existing || []).forEach((r: any) => {
+    if (excludeId && r.id === excludeId) return;
+    const k = identityKey(r.data_peserta, kecamatanId);
+    if (k) existingKeys.add(k);
+  });
+
+  const seen = new Map<string, number>();
+  const dups: DupInfo[] = [];
+  list.forEach((item, i) => {
+    const k = identityKey(item, kecamatanId);
+    if (!k) return;
+    if (existingKeys.has(k)) dups.push({ index: i, nama: cleanText(item.nama_lengkap), reason: 'sudah_terdaftar' });
+    else if (seen.has(k)) dups.push({ index: i, nama: cleanText(item.nama_lengkap), reason: 'ganda_dalam_daftar', dengan: seen.get(k)! });
+    else seen.set(k, i);
+  });
+  return dups;
+}
+
+function duplicateMessage(dups: DupInfo[], single: boolean): string {
+  if (single) {
+    return `Pendaftar ganda terdeteksi: "${dups[0].nama}" dengan Kwaran, pangkalan, tempat lahir, dan tanggal lahir yang sama sudah terdaftar di kegiatan ini. Pendaftaran ditolak.`;
+  }
+  const parts = dups.map(d => d.reason === 'sudah_terdaftar'
+    ? `Peserta #${d.index + 1} "${d.nama}" sudah terdaftar di kegiatan ini`
+    : `Peserta #${d.index + 1} "${d.nama}" dobel dengan peserta #${(d.dengan ?? 0) + 1}`);
+  return `Pendaftar ganda terdeteksi, pendaftaran ditolak. ${parts.join('; ')}. Perbaiki data tersebut lalu kirim ulang.`;
+}
+
 app.get('/api/agenda/:id/config', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { data } = await supabaseAdmin.from('form_kegiatan_config').select('*').eq('agenda_id', id).maybeSingle();
-    res.json(data || null);
+    res.json(data ? { ...data, form_schema: ensureCoreFormFields(data.form_schema) } : null);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -786,7 +926,8 @@ app.get('/api/agenda/:id/config', async (req: Request, res: Response) => {
 app.post('/api/agenda/:id/config', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { form_schema, tipe_pendaftaran, is_qr_validasi = true, is_qr_checkin = false } = req.body;
+    const { tipe_pendaftaran, is_qr_validasi = true, is_qr_checkin = false } = req.body;
+    const form_schema = ensureCoreFormFields(req.body.form_schema); // field inti selalu dipaksa ada
     const { data: existing } = await supabaseAdmin.from('form_kegiatan_config').select('id').eq('agenda_id', id).maybeSingle();
     if (existing) {
       await supabaseAdmin.from('form_kegiatan_config').update({ form_schema, tipe_pendaftaran, is_qr_validasi, is_qr_checkin }).eq('agenda_id', id);
@@ -830,11 +971,17 @@ app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { tipe, kecamatan_id, data_peserta } = req.body;
+    const prep = await prepareRegistrant(data_peserta, kecamatan_id);
+    if (prep.error) return res.status(400).json({ error: prep.error });
+    const dups = await findDuplicates(id, kecamatan_id, [prep.data]);
+    if (dups.length > 0) {
+      return res.status(409).json({ code: 'DUPLICATE', error: duplicateMessage(dups, true), duplicates: dups });
+    }
     const { data, error } = await supabaseAdmin.from('pendaftaran_peserta').insert({
       agenda_id: id,
       tipe,
       kecamatan_id,
-      data_peserta
+      data_peserta: prep.data
     }).select('id').single();
     
     if (error) throw error;
@@ -859,8 +1006,31 @@ app.put('/api/registrants/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { data_peserta } = req.body;
+    const { data: current } = await supabaseAdmin.from('pendaftaran_peserta')
+      .select('id, agenda_id, kecamatan_id').eq('id', id).maybeSingle();
+    if (!current) return res.status(404).json({ error: 'Data pendaftar tidak ditemukan' });
+
+    let payload = data_peserta;
+    if (payload && typeof payload === 'object') {
+      payload = { ...payload };
+      if (payload.nama_lengkap !== undefined) payload.nama_lengkap = cleanText(payload.nama_lengkap);
+      if (payload.pangkalan !== undefined) payload.pangkalan = cleanText(payload.pangkalan);
+      if (payload.tempat_lahir !== undefined) payload.tempat_lahir = cleanText(payload.tempat_lahir);
+      if (payload.tanggal_lahir !== undefined && payload.tanggal_lahir !== '') {
+        const nd = normDate(payload.tanggal_lahir);
+        if (!nd) return res.status(400).json({ error: 'Format Tanggal Lahir tidak valid.' });
+        if (nd > todayJakarta()) return res.status(400).json({ error: 'Tanggal Lahir tidak boleh di masa depan.' });
+        payload.tanggal_lahir = nd;
+      }
+      if (current.kecamatan_id) {
+        const dups = await findDuplicates(current.agenda_id, current.kecamatan_id, [payload], id);
+        if (dups.length > 0) {
+          return res.status(409).json({ code: 'DUPLICATE', error: duplicateMessage(dups, true), duplicates: dups });
+        }
+      }
+    }
     const { data, error } = await supabaseAdmin.from('pendaftaran_peserta')
-      .update({ data_peserta })
+      .update({ data_peserta: payload })
       .eq('id', id).select().single();
     if (error) throw error;
     res.json(data);
@@ -894,12 +1064,30 @@ app.post('/api/agenda/:id/register-batch', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'Daftar peserta tidak boleh kosong' });
     }
 
-    const rows = peserta_list.map((p: any) => ({
+    // Validasi field inti tiap peserta (+ isi kwarran_asal otomatis)
+    const prepared: any[] = [];
+    const prepErrors: string[] = [];
+    for (let i = 0; i < peserta_list.length; i++) {
+      const prep = await prepareRegistrant(peserta_list[i]?.data_peserta, kecamatan_id);
+      if (prep.error) prepErrors.push(`Peserta #${i + 1}: ${prep.error}`);
+      else prepared.push(prep.data);
+    }
+    if (prepErrors.length > 0) {
+      return res.status(400).json({ error: prepErrors.slice(0, 5).join(' | ') });
+    }
+
+    // Deteksi pendaftar ganda (terhadap data existing & antar peserta dalam kiriman ini)
+    const dups = await findDuplicates(id, kecamatan_id, prepared);
+    if (dups.length > 0) {
+      return res.status(409).json({ code: 'DUPLICATE', error: duplicateMessage(dups, false), duplicates: dups });
+    }
+
+    const rows = prepared.map((pd: any) => ({
       agenda_id: id,
       tipe: 'kolektif',
       kecamatan_id: kecamatan_id || null,
       data_peserta: {
-        ...p.data_peserta,
+        ...pd,
         ...(bukti_bayar_url ? { _bukti_bayar: bukti_bayar_url } : {})
       }
     }));

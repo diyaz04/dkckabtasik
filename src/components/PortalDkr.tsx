@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PangkalanInput, { isPangkalanField, savePangkalanFromRows } from './PangkalanInput';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
 import SuratDkrPanel from './SuratDkrPanel';
 import { useSuratDkr } from '../utils/suratDkr';
@@ -1567,6 +1568,8 @@ export default function PortalDkr() {
                             const config = await configRes.json();
                             if (config && config.form_schema) {
                               setAddPesertaFormData({ form_schema: config.form_schema });
+                              setEditPesertaId(null);
+                              setAddPesertaFormValues({});
                               setShowAddPesertaModal(true);
                             } else {
                               alert('Konfigurasi form belum diatur oleh Cabang.');
@@ -2475,19 +2478,23 @@ export default function PortalDkr() {
           <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-6 border-b flex justify-between items-center bg-gray-50">
               <h3 className="font-extrabold text-brand-brown-dark text-lg">{editPesertaId ? 'Edit Peserta' : 'Tambah Peserta'}</h3>
-              <button onClick={() => setShowAddPesertaModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setShowAddPesertaModal(false); setEditPesertaId(null); }} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
               {addPesertaFormData?.form_schema ? (
-                addPesertaFormData.form_schema.filter((f: any) => !(f.label?.toLowerCase().includes('kwarran') || f.label?.toLowerCase().includes('kwartir ranting'))).map((f: any) => (
+                addPesertaFormData.form_schema.filter((f: any) => !(f.auto || f.label?.toLowerCase().includes('kwarran') || f.label?.toLowerCase().includes('kwartir ranting'))).map((f: any) => (
                   <div key={f.id}>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                       {f.label} {f.required && <span className="text-brand-orange">*</span>}
                     </label>
-                    {f.type === 'select' ? (
+                    {isPangkalanField(f) ? (
+                      <PangkalanInput required={f.required} kecamatanId={kecamatan?.id}
+                        value={addPesertaFormValues[f.id] || ''}
+                        onChange={(v) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: v})} />
+                    ) : f.type === 'select' ? (
                       <select required={f.required} value={addPesertaFormValues[f.id] || ''}
                         onChange={(e) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: e.target.value})}
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800">
@@ -2501,7 +2508,7 @@ export default function PortalDkr() {
                         onChange={(e) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: e.target.value})}
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800" rows={3} />
                     ) : (
-                      <input type={f.type === 'number' ? 'number' : 'text'} required={f.required}
+                      <input type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} required={f.required}
                         value={addPesertaFormValues[f.id] || ''}
                         onChange={(e) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: e.target.value})}
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-xs text-gray-800" />
@@ -2515,7 +2522,7 @@ export default function PortalDkr() {
 
             <div className="p-6 border-t bg-gray-50 flex justify-end gap-3">
               <button 
-                onClick={() => setShowAddPesertaModal(false)}
+                onClick={() => { setShowAddPesertaModal(false); setEditPesertaId(null); }}
                 className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700"
               >
                 Batal
@@ -2525,7 +2532,7 @@ export default function PortalDkr() {
                 onClick={async () => {
                   if (addPesertaFormData?.form_schema) {
                     for (const f of addPesertaFormData.form_schema) {
-                      if (f.required && !addPesertaFormValues[f.id]) {
+                      if (f.required && !f.auto && !addPesertaFormValues[f.id]) {
                         alert(`Kolom "${f.label}" wajib diisi!`);
                         return;
                       }
@@ -2535,7 +2542,10 @@ export default function PortalDkr() {
                   setAddPesertaSaving(true);
                   try {
                     const keca = JSON.parse(localStorage.getItem('dkc_keca') || '{}');
-                    const res = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/register`, {
+                    await savePangkalanFromRows(addPesertaFormData?.form_schema, [addPesertaFormValues], keca.id);
+                    const res = editPesertaId
+                      ? await fetch(`/api/registrants/${editPesertaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data_peserta: addPesertaFormValues }) })
+                      : await fetch(`/api/agenda/${selectedTagihan.agenda_id}/register`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -2565,6 +2575,7 @@ export default function PortalDkr() {
                       }
                       setShowAddPesertaModal(false);
                       setAddPesertaFormValues({});
+                      setEditPesertaId(null);
                       
                       const res2 = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/registrants`);
                       if(res2.ok) {

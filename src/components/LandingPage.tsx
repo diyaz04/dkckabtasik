@@ -2,6 +2,8 @@ import QRCode from 'react-qr-code';
 import { downloadPamflet } from '../utils/pamflet';
 import { showAlert as alert } from '../utils/dialog';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import PangkalanInput, { isPangkalanField, savePangkalanFromRows } from './PangkalanInput';
+import { normalizeDate } from '../utils/coreFields';
 import { Link } from 'react-router-dom';
 import { 
   Compass, Award, ChevronRight, ChevronLeft, Calendar, BookOpen, Users, 
@@ -463,7 +465,7 @@ export default function LandingPage() {
   // ─── Download Excel Template for Kolektif ───
   const downloadExcelTemplate = () => {
     if (!agendaConfig?.form_schema) return;
-    const headers = agendaConfig.form_schema.map(f => f.label);
+    const headers = agendaConfig.form_schema.filter(f => !f.auto).map(f => f.label);
     const ws = XLSX.utils.aoa_to_sheet([headers, []]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template');
@@ -499,8 +501,18 @@ export default function LandingPage() {
         let rowValid = true;
 
         schemaFields.forEach(field => {
+          if (field.auto) return; // diisi otomatis dari Asal Kwartir Ranting
           const colIdx = headers.indexOf(field.label);
-          const val = colIdx >= 0 ? String(row[colIdx] || '').trim() : '';
+          let val = colIdx >= 0 ? String(row[colIdx] ?? '').trim() : '';
+          if (field.type === 'date' && val) {
+            const nd = normalizeDate(row[colIdx]);
+            if (!nd) {
+              errors.push(`Baris ${rowIdx + 2}: Kolom "${field.label}" format tanggal tidak valid (gunakan DD/MM/YYYY atau YYYY-MM-DD).`);
+              rowValid = false;
+              return;
+            }
+            val = nd;
+          }
           if (field.required && !val) {
             errors.push(`Baris ${rowIdx + 2}: Kolom "${field.label}" wajib diisi.`);
             rowValid = false;
@@ -549,6 +561,8 @@ export default function LandingPage() {
 
     setRegisterLoading(true);
     try {
+      // Simpan otomatis pangkalan baru yang diketik user
+      await savePangkalanFromRows(agendaConfig?.form_schema, pesertaToSend, kolektifKecamatanId);
       const res = await fetch(`/api/agenda/${selectedAgenda.id}/register-batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -566,7 +580,8 @@ export default function LandingPage() {
         setKolektifBatchIds(data.ids);
         setPendaftaranId(`kolektif-${data.ids.length}`);
       } else {
-        alert('Gagal mengirim pendaftaran kolektif. Coba lagi.');
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Gagal mengirim pendaftaran kolektif. Coba lagi.');
       }
     } catch (err) {
       console.error(err);
@@ -593,6 +608,9 @@ export default function LandingPage() {
     }
 
     try {
+      // Simpan otomatis pangkalan baru yang diketik user
+      await savePangkalanFromRows(agendaConfig?.form_schema, [registrationFormData], kolektifKecamatanId);
+
       const response = await fetch(`/api/agenda/${selectedAgenda.id}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -611,7 +629,8 @@ export default function LandingPage() {
         setPendaftaranId(data.id);
         setRegisterSuccess(true);
       } else {
-        alert('Gagal mengirim pendaftaran, silakan coba lagi.');
+        const err = await response.json().catch(() => null);
+        alert(err?.error || 'Gagal mengirim pendaftaran, silakan coba lagi.');
       }
     } catch (error) {
       console.error(error);
@@ -1975,7 +1994,7 @@ export default function LandingPage() {
                           kecamatanList.find(k => k.id === kolektifKecamatanId)?.nama_kecamatan || ''
                         }
                         formData={registrationFormData}
-                        formFields={agendaConfig?.form_schema || []}
+                        formFields={(agendaConfig?.form_schema || []).filter(f => !f.auto)}
                         isQrValidasi={agendaConfig?.is_qr_validasi ?? true}
                         isQrCheckin={agendaConfig?.is_qr_checkin ?? false}
                         kolektifPeserta={kolektifMode === 'excel' ? excelImportData : kolektifPeserta}
@@ -2040,17 +2059,20 @@ export default function LandingPage() {
                                     className="text-gray-400 hover:text-red-500 text-[10px] font-bold cursor-pointer">✕ Hapus</button>
                                 )}
                               </div>
-                              {agendaConfig.form_schema.map(f => (
+                              {agendaConfig.form_schema.filter(f => !f.auto).map(f => (
                                 <div key={f.id}>
                                   <label className="block text-[10px] text-gray-500 font-bold uppercase mb-0.5">{f.label}{f.required && <span className="text-red-400"> *</span>}</label>
-                                  {f.type === 'select' ? (
+                                  {isPangkalanField(f) ? (
+                                    <PangkalanInput compact required={f.required} kecamatanId={kolektifKecamatanId}
+                                      value={peserta[f.id] || ''} onChange={v => updateKolektifRow(rowIdx, f.id, v)} />
+                                  ) : f.type === 'select' ? (
                                     <select required={f.required} value={peserta[f.id] || ''} onChange={e => updateKolektifRow(rowIdx, f.id, e.target.value)}
                                       className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
                                       <option value="">-- Pilih --</option>
                                       {f.options?.map(o => <option key={o} value={o}>{o}</option>)}
                                     </select>
                                   ) : (
-                                    <input type={f.type === 'number' ? 'number' : 'text'} required={f.required}
+                                    <input type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} required={f.required}
                                       value={peserta[f.id] || ''} onChange={e => updateKolektifRow(rowIdx, f.id, e.target.value)}
                                       placeholder={f.label} className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs" />
                                   )}
@@ -2135,13 +2157,16 @@ export default function LandingPage() {
                       {/* Schema fields */}
                       <div className="space-y-4 max-h-[250px] overflow-y-auto pr-2">
                         {agendaConfig?.form_schema ? (
-                          agendaConfig.form_schema.map((f) => (
+                          agendaConfig.form_schema.filter((f) => !f.auto).map((f) => (
                             <div key={f.id}>
                               <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                                 {f.label} {f.required && <span className="text-brand-red">*</span>}
                               </label>
 
-                              {f.type === 'select' ? (
+                              {isPangkalanField(f) ? (
+                                <PangkalanInput required={f.required} kecamatanId={kolektifKecamatanId}
+                                  value={registrationFormData[f.id] || ''} onChange={v => handleInputChange(f.id, v)} />
+                              ) : f.type === 'select' ? (
                                 <select required={f.required} value={registrationFormData[f.id] || ''}
                                   onChange={(e) => handleInputChange(f.id, e.target.value)}
                                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800 font-medium">
@@ -2159,7 +2184,7 @@ export default function LandingPage() {
                                   placeholder={`Masukkan ${f.label.toLowerCase()}`} rows={3}
                                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs text-gray-800" />
                               ) : (
-                                <input type={f.type === 'number' ? 'number' : 'text'} required={f.required}
+                                <input type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} required={f.required}
                                   value={registrationFormData[f.id] || ''}
                                   onChange={(e) => handleInputChange(f.id, e.target.value)}
                                   placeholder={`Masukkan ${f.label.toLowerCase()}`}

@@ -1,5 +1,6 @@
 import LaporanPdfTemplate from './LaporanPdfTemplate';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
+import { ensureCoreFields } from '../utils/coreFields';
 import SuratAdminPanel from './SuratAdminPanel';
 import VisibilityToggleCard from './VisibilityToggleCard';
 import { cacheKlasemenVisible } from '../utils/useKlasemenVisible';
@@ -12,7 +13,7 @@ import {
   BarChart2, Users, Building, FileText, Calendar, Plus, Trash, Check, X,
   Save, Edit, Lock, Eye, AlertCircle, ToggleLeft, ToggleRight, LayoutDashboard, Search, Bell, Menu, Settings,
   RefreshCw, Palette, Upload, Award, ClipboardList, Printer, Clock, ChevronRight, Download, PanelLeft
-, Edit2 } from 'lucide-react';
+, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
   Informasi, SiteContent, FormKegiatanConfig, DataPotensial, Profile, Saka, LaporanKegiatan 
@@ -26,7 +27,7 @@ import GreetingBanner from './GreetingBanner';
 
 export default function PortalAdmin() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi' | 'surat'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial_dkr' | 'potensial_saka' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'users_dkr' | 'users_saka' | 'konten' | 'laporan' | 'informasi' | 'surat'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { list: suratList, reload: reloadSurat } = useSuratDkr('admin');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -46,6 +47,88 @@ export default function PortalAdmin() {
   const [userList, setUserList] = useState<any[]>([]);
   const [siteContent, setSiteContent] = useState<SiteContent[]>([]);
   const [pangkalanList, setPangkalanList] = useState<any[]>([]);
+
+  // Daftar Pangkalan/Gudep (admin) — tabel bertingkat per kwaran
+  const [expandedKwarranPk, setExpandedKwarranPk] = useState<string[]>([]);
+  const [pangkalanSearch, setPangkalanSearch] = useState('');
+  const [editingPangkalan, setEditingPangkalan] = useState<{ id: string; nama_pangkalan: string; jenis: string; status_aktif: boolean } | null>(null);
+  const [addPangkalanKwarran, setAddPangkalanKwarran] = useState<string | null>(null);
+  const [addPangkalanNama, setAddPangkalanNama] = useState('');
+  const [addPangkalanJenis, setAddPangkalanJenis] = useState('SMA');
+  const [pangkalanSaving, setPangkalanSaving] = useState(false);
+
+  const reloadPangkalan = async () => {
+    try {
+      const data = await fetch('/api/pangkalan').then(r => r.json());
+      setPangkalanList(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleKwarranPk = (id: string) => {
+    setExpandedKwarranPk(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const postPangkalan = async (payload: any) => {
+    setPangkalanSaving(true);
+    try {
+      const res = await fetch('/api/pangkalan/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('Gagal menyimpan pangkalan');
+      await reloadPangkalan();
+      return true;
+    } catch (e: any) {
+      alert(e.message || 'Gagal menyimpan pangkalan');
+      return false;
+    } finally {
+      setPangkalanSaving(false);
+    }
+  };
+
+  const handleSaveEditPangkalan = async () => {
+    if (!editingPangkalan || !editingPangkalan.nama_pangkalan.trim()) return;
+    const ok = await postPangkalan({
+      id: editingPangkalan.id,
+      nama_pangkalan: editingPangkalan.nama_pangkalan.trim(),
+      jenis: editingPangkalan.jenis,
+      status_aktif: editingPangkalan.status_aktif
+    });
+    if (ok) setEditingPangkalan(null);
+  };
+
+  const handleAddPangkalanAdmin = async (kecamatanId: string) => {
+    if (!addPangkalanNama.trim()) return;
+    const ok = await postPangkalan({
+      kecamatan_id: kecamatanId,
+      nama_pangkalan: addPangkalanNama.trim(),
+      jenis: addPangkalanJenis,
+      status_aktif: true
+    });
+    if (ok) {
+      setAddPangkalanNama('');
+      setAddPangkalanJenis('SMA');
+      setAddPangkalanKwarran(null);
+    }
+  };
+
+  const handleDeletePangkalanAdmin = async (pk: any) => {
+    if (!await showConfirm(`Hapus pangkalan "${pk.nama_pangkalan}"?`)) return;
+    try {
+      const res = await fetch('/api/pangkalan/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: pk.id })
+      });
+      if (!res.ok) throw new Error('Gagal menghapus pangkalan');
+      await reloadPangkalan();
+    } catch (e: any) {
+      alert(e.message || 'Gagal menghapus pangkalan');
+    }
+  };
   const [personaliaList, setPersonaliaList] = useState<Personalia[]>([]);
   const [informasiList, setInformasiList] = useState<Informasi[]>([]);
 
@@ -767,7 +850,7 @@ export default function PortalAdmin() {
       const configRes = await fetch(`/api/agenda/${agenda.id}/config`);
       const config = await configRes.json();
       if (config) {
-        setFormFields(config.form_schema || []);
+        setFormFields(ensureCoreFields(config.form_schema));
         setPendaftaranTipe(config.tipe_pendaftaran || 'keduanya');
       } else {
         setFormFields([]);
@@ -794,15 +877,12 @@ export default function PortalAdmin() {
       const configRes = await fetch(`/api/agenda/${agenda.id}/config`);
       const config = await configRes.json();
       if (config) {
-        setFormFields(config.form_schema || []);
+        setFormFields(ensureCoreFields(config.form_schema));
         setPendaftaranTipe(config.tipe_pendaftaran || 'keduanya');
         setIsQrValidasi(config.is_qr_validasi ?? true);
         setIsQrCheckin(config.is_qr_checkin ?? false);
       } else {
-        setFormFields([
-          { id: 'f1', label: 'Nama Lengkap Pendaftar', type: 'text', required: true },
-          { id: 'f2', label: 'Asal Gugus Depan', type: 'text', required: true }
-        ]);
+        setFormFields(ensureCoreFields([]));
         setPendaftaranTipe('keduanya');
         setIsQrValidasi(true);
         setIsQrCheckin(false);
@@ -825,7 +905,7 @@ export default function PortalAdmin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          form_schema: formFields,
+          form_schema: ensureCoreFields(formFields),
           tipe_pendaftaran: pendaftaranTipe,
           is_qr_validasi: isQrValidasi,
           is_qr_checkin: isQrCheckin
@@ -846,7 +926,7 @@ export default function PortalAdmin() {
     }
 
     const headerCols = ['No', 'Waktu Daftar', 'Status Kehadiran', 'Waktu Hadir', 'Tipe Pendaftaran', 'Asal Kwarran'];
-    formFields.forEach(f => headerCols.push(f.label));
+    formFields.filter(f => !f.auto).forEach(f => headerCols.push(f.label));
     
     const rows: any[][] = [];
     rows.push(headerCols);
@@ -868,7 +948,7 @@ export default function PortalAdmin() {
         kwarran
       ];
 
-      formFields.forEach(f => {
+      formFields.filter(f => !f.auto).forEach(f => {
         rowData.push(reg.data_peserta[f.id] || '-');
       });
 
@@ -1412,6 +1492,16 @@ export default function PortalAdmin() {
             <BarChart2 className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>Potensial SAKA (Karya)</span>}</button>
 
+          <button 
+            title={isSidebarCollapsed ? 'Daftar Pangkalan/Gudep' : ''} 
+            onClick={() => { setActiveTab('pangkalan'); setIsMobileMenuOpen(false); }}
+            className={`w-full text-left px-4 py-3.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : ''} ${
+              activeTab === 'pangkalan' ? 'bg-white text-[#065F46] shadow-md' : 'text-emerald-50 hover:bg-white/10'
+            }`}
+          >
+            <Building className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>Daftar Pangkalan/Gudep</span>}</button>
+
           {/* Kategori: KONTEN & PUBLIKASI */}
           <p className={`px-4 pt-3 pb-1 text-[9px] font-bold text-emerald-200/70 uppercase tracking-widest font-mono ${isSidebarCollapsed ? 'text-center opacity-50' : ''}`}>
             {isSidebarCollapsed ? '•' : 'Konten &amp; Publikasi'}
@@ -1756,6 +1846,200 @@ export default function PortalAdmin() {
         )}
 
         {/* TAB 2B: DATA POTENSIAL SAKA */}
+        {activeTab === 'pangkalan' && (() => {
+          const q = pangkalanSearch.trim().toLowerCase();
+          const kwarranRows = [...kecamatanList]
+            .sort((a, b) => a.nama_kecamatan.localeCompare(b.nama_kecamatan))
+            .map(k => {
+              const all = pangkalanList.filter(p => p.kecamatan_id === k.id);
+              const shown = q ? all.filter(p => (p.nama_pangkalan || '').toLowerCase().includes(q)) : all;
+              return { k, all, shown };
+            })
+            .filter(r => !q || r.k.nama_kecamatan.toLowerCase().includes(q) || r.shown.length > 0);
+          const totalPangkalan = pangkalanList.filter(p => p.kecamatan_id).length;
+          const totalAktif = pangkalanList.filter(p => p.kecamatan_id && p.status_aktif).length;
+          return (
+          <div className="space-y-8 animate-fade-in">
+            <div className="border-b border-gray-200 pb-4">
+              <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Daftar Pangkalan / Gudep</h1>
+              <p className="text-xs text-gray-500 font-mono mt-1">Data hasil input DKR tiap Kwaran. Klik baris Kwaran untuk melihat nama-nama pangkalan, lalu edit, nonaktifkan, atau hapus bila perlu.</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                <span className="text-[10px] text-gray-400 font-mono uppercase font-semibold">Total Kwaran</span>
+                <p className="text-2xl font-extrabold text-brand-brown-dark">{kecamatanList.length}</p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+                <span className="text-[10px] text-gray-400 font-mono uppercase font-semibold">Total Pangkalan</span>
+                <p className="text-2xl font-extrabold text-brand-brown-dark">{totalPangkalan}</p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-gray-400 font-mono uppercase font-semibold">Pangkalan Aktif</span>
+                <p className="text-2xl font-extrabold text-brand-green">{totalAktif}</p>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="p-4 sm:p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <span className="font-extrabold text-xs text-brand-brown-dark font-mono uppercase">Rekap Pangkalan per Kwaran</span>
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text" value={pangkalanSearch} onChange={(e) => setPangkalanSearch(e.target.value)}
+                    placeholder="Cari kwaran / nama pangkalan..."
+                    className="w-full bg-white border border-slate-200/80 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead>
+                    <tr className="bg-gray-50 text-[10px] uppercase text-gray-400 tracking-wider border-b border-gray-100">
+                      <th className="px-4 sm:px-6 py-3 w-12">No</th>
+                      <th className="px-4 py-3">Kwartir Ranting</th>
+                      <th className="px-4 py-3 text-center">Jumlah Pangkalan</th>
+                      <th className="px-4 py-3 text-center hidden sm:table-cell">Aktif</th>
+                      <th className="px-4 sm:px-6 py-3 w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kwarranRows.length === 0 && (
+                      <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-400">Tidak ada data yang cocok.</td></tr>
+                    )}
+                    {kwarranRows.map(({ k, all, shown }, idx) => {
+                      const isOpen = !!q || expandedKwarranPk.includes(k.id);
+                      const aktifCount = all.filter(p => p.status_aktif).length;
+                      return (
+                        <React.Fragment key={k.id}>
+                          <tr
+                            onClick={() => toggleKwarranPk(k.id)}
+                            className={`border-b border-gray-100 cursor-pointer transition-colors ${isOpen ? 'bg-emerald-50/60' : 'hover:bg-gray-50'}`}
+                          >
+                            <td className="px-4 sm:px-6 py-3.5 text-gray-400">{idx + 1}</td>
+                            <td className="px-4 py-3.5 font-bold text-brand-brown-dark">Kwaran {k.nama_kecamatan}</td>
+                            <td className="px-4 py-3.5 text-center">
+                              <span className="inline-block min-w-[2rem] px-2 py-0.5 rounded-full bg-brand-green/10 text-brand-green font-extrabold">{all.length}</span>
+                            </td>
+                            <td className="px-4 py-3.5 text-center text-gray-500 hidden sm:table-cell">{aktifCount}</td>
+                            <td className="px-4 sm:px-6 py-3.5 text-gray-400">
+                              {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </td>
+                          </tr>
+
+                          {isOpen && (
+                            <tr className="border-b border-gray-100 bg-gray-50/40">
+                              <td></td>
+                              <td colSpan={4} className="px-4 py-4 sm:pr-6">
+                                <div className="space-y-2">
+                                  {shown.length === 0 && (
+                                    <p className="text-[11px] text-gray-400 py-2">Belum ada pangkalan terdaftar di kwaran ini.</p>
+                                  )}
+                                  {shown.map((pk, i) => (
+                                    editingPangkalan?.id === pk.id ? (
+                                      <div key={pk.id} className="p-3 bg-white border-2 border-brand-green/40 rounded-xl grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                                        <input
+                                          type="text" value={editingPangkalan.nama_pangkalan}
+                                          onChange={(e) => setEditingPangkalan({ ...editingPangkalan, nama_pangkalan: e.target.value })}
+                                          className="sm:col-span-5 w-full bg-gray-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
+                                        />
+                                        <select
+                                          value={editingPangkalan.jenis}
+                                          onChange={(e) => setEditingPangkalan({ ...editingPangkalan, jenis: e.target.value })}
+                                          className="sm:col-span-3 w-full bg-gray-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
+                                        >
+                                          <option value="SMA">SMA</option>
+                                          <option value="SMK">SMK</option>
+                                          <option value="MA">MA</option>
+                                          <option value="Perguruan Tinggi">Perguruan Tinggi</option>
+                                          <option value="lainnya">Lainnya / Umum</option>
+                                        </select>
+                                        <select
+                                          value={editingPangkalan.status_aktif ? '1' : '0'}
+                                          onChange={(e) => setEditingPangkalan({ ...editingPangkalan, status_aktif: e.target.value === '1' })}
+                                          className="sm:col-span-2 w-full bg-gray-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
+                                        >
+                                          <option value="1">Aktif</option>
+                                          <option value="0">Nonaktif</option>
+                                        </select>
+                                        <div className="sm:col-span-2 flex gap-1.5 justify-end">
+                                          <button disabled={pangkalanSaving} onClick={handleSaveEditPangkalan} className="p-2 rounded-lg bg-brand-green text-white hover:bg-brand-green/90 disabled:opacity-50" title="Simpan"><Check className="w-3.5 h-3.5" /></button>
+                                          <button onClick={() => setEditingPangkalan(null)} className="p-2 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300" title="Batal"><X className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div key={pk.id} className="p-3 bg-white border border-gray-200 rounded-xl flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <strong className="text-brand-brown-dark text-xs block truncate">{i + 1}. {pk.nama_pangkalan}</strong>
+                                          <span className="text-[10px] text-gray-400 uppercase">
+                                            {pk.jenis} · <span className={pk.status_aktif ? 'text-brand-green font-bold' : 'text-red-500 font-bold'}>{pk.status_aktif ? 'Aktif' : 'Nonaktif'}</span>
+                                          </span>
+                                        </div>
+                                        <div className="flex gap-1.5 shrink-0">
+                                          <button
+                                            onClick={() => setEditingPangkalan({ id: pk.id, nama_pangkalan: pk.nama_pangkalan, jenis: pk.jenis, status_aktif: !!pk.status_aktif })}
+                                            className="p-2 rounded-lg text-brand-teal hover:bg-brand-teal/10" title="Edit"
+                                          ><Edit className="w-3.5 h-3.5" /></button>
+                                          <button
+                                            onClick={() => handleDeletePangkalanAdmin(pk)}
+                                            className="p-2 rounded-lg text-brand-red hover:bg-brand-red/10" title="Hapus"
+                                          ><Trash className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                      </div>
+                                    )
+                                  ))}
+
+                                  {/* Tambah pangkalan di kwaran ini */}
+                                  {addPangkalanKwarran === k.id ? (
+                                    <div className="p-3 bg-white border border-dashed border-brand-green/50 rounded-xl grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                                      <input
+                                        type="text" value={addPangkalanNama} onChange={(e) => setAddPangkalanNama(e.target.value)}
+                                        placeholder="Nama pangkalan / gudep"
+                                        className="sm:col-span-6 w-full bg-gray-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200"
+                                      />
+                                      <select value={addPangkalanJenis} onChange={(e) => setAddPangkalanJenis(e.target.value)} className="sm:col-span-4 w-full bg-gray-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white transition-all duration-200">
+                                        <option value="SMA">SMA</option>
+                                        <option value="SMK">SMK</option>
+                                        <option value="MA">MA</option>
+                                        <option value="Perguruan Tinggi">Perguruan Tinggi</option>
+                                        <option value="lainnya">Lainnya / Umum</option>
+                                      </select>
+                                      <div className="sm:col-span-2 flex gap-1.5 justify-end">
+                                        <button disabled={pangkalanSaving} onClick={() => handleAddPangkalanAdmin(k.id)} className="p-2 rounded-lg bg-brand-green text-white hover:bg-brand-green/90 disabled:opacity-50" title="Simpan"><Check className="w-3.5 h-3.5" /></button>
+                                        <button onClick={() => { setAddPangkalanKwarran(null); setAddPangkalanNama(''); }} className="p-2 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300" title="Batal"><X className="w-3.5 h-3.5" /></button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => { setAddPangkalanKwarran(k.id); setAddPangkalanNama(''); }}
+                                      className="text-[11px] font-bold text-brand-green hover:underline flex items-center gap-1 pt-1"
+                                    ><Plus className="w-3 h-3" /> Tambah pangkalan di Kwaran {k.nama_kecamatan}</button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-50 font-extrabold text-brand-brown-dark border-t border-gray-200">
+                      <td></td>
+                      <td className="px-4 py-3 uppercase text-[10px] tracking-wider">Total</td>
+                      <td className="px-4 py-3 text-center">{totalPangkalan}</td>
+                      <td className="px-4 py-3 text-center hidden sm:table-cell">{totalAktif}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
+
         {activeTab === 'potensial_saka' && (
           <div className="space-y-8">
             <div className="border-b border-gray-200 pb-4">
@@ -2596,12 +2880,13 @@ export default function PortalAdmin() {
                               <label className="block text-[9px] text-gray-400 mb-1">Label Field</label>
                               <input 
                                 type="text" value={field.label}
+                                disabled={!!field.locked}
                                 onChange={(e) => {
                                   const list = [...formFields];
                                   list[idx].label = e.target.value;
                                   setFormFields(list);
                                 }}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-sans text-sm text-brand-brown-dark font-bold focus:bg-white focus:border-brand-orange focus:outline-none transition-colors"
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-sans text-sm text-brand-brown-dark font-bold focus:bg-white focus:border-brand-orange focus:outline-none transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                                 placeholder="Cth: Nama Lengkap"
                               />
                             </div>
@@ -2612,24 +2897,27 @@ export default function PortalAdmin() {
                               <label className="block text-[9px] text-gray-400 mb-1">Tipe Input</label>
                               <select 
                                 value={field.type}
+                                disabled={!!field.locked}
                                 onChange={(e) => {
                                   const list = [...formFields];
                                   list[idx].type = e.target.value;
                                   setFormFields(list);
                                 }}
-                                className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:border-brand-orange focus:outline-none transition-colors min-w-[140px]"
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:border-brand-orange focus:outline-none transition-colors min-w-[140px] disabled:opacity-70 disabled:cursor-not-allowed"
                               >
                                 <option value="text">Text Pendek</option>
                                 <option value="number">Angka (Numeric)</option>
                                 <option value="select">Dropdown Pilihan</option>
                                 <option value="textarea">Teks Panjang</option>
+                                <option value="pangkalan">Pilih Pangkalan (dari database)</option>
+                                <option value="date">Tanggal</option>
                               </select>
                             </div>
 
                             <div className="flex items-center h-full pb-2 lg:pb-0">
                               <label className="flex items-center gap-2 font-bold text-xs text-gray-600 cursor-pointer hover:text-brand-orange transition-colors">
                                 <input 
-                                  type="checkbox" checked={field.required}
+                                  type="checkbox" checked={field.required || !!field.locked} disabled={!!field.locked}
                                   onChange={(e) => {
                                     const list = [...formFields];
                                     list[idx].required = e.target.checked;
@@ -2640,13 +2928,19 @@ export default function PortalAdmin() {
                               </label>
                             </div>
 
+                            {field.locked ? (
+                              <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl mb-0.5 lg:mb-0" title="Field inti: wajib ada di setiap kegiatan">
+                                <Lock className="w-3.5 h-3.5" /> Wajib · tidak bisa dihapus
+                              </span>
+                            ) : (
                             <button
-                              onClick={() => setFormFields(formFields.filter((_, i) => i !== idx))}
+                              onClick={() => { if (field.locked) return; setFormFields(formFields.filter((_, i) => i !== idx)); }}
                               className="text-brand-red bg-brand-red/10 hover:bg-brand-red/20 hover:text-red-700 p-2.5 rounded-xl transition-colors mb-0.5 lg:mb-0"
                               title="Hapus Field"
                             >
                               <Trash className="w-4 h-4" />
                             </button>
+                            )}
                           </div>
                           </div> {/* end inner wrapper */}
 

@@ -153,9 +153,11 @@ export interface AgendaKegiatan {
 export interface FormFieldConfig {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'textarea' | 'checkbox';
+  type: 'text' | 'number' | 'select' | 'textarea' | 'checkbox' | 'pangkalan' | 'date';
   required: boolean;
   options?: string[]; // For 'select' type
+  locked?: boolean; // field inti: tidak bisa dihapus/diubah di form builder
+  auto?: boolean; // diisi otomatis sistem (tidak ditampilkan di form)
 }
 
 export interface FormKegiatanConfig {
