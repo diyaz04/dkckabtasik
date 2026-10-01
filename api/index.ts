@@ -10,12 +10,15 @@ if (!supabaseUrl || !supabaseKey) {
   console.warn('SUPABASE_URL or SUPABASE_ANON_KEY is missing. API calls to Supabase will fail.');
 }
 
+// Tanpa persist/auto-refresh: server tidak boleh "mengingat" sesi user mana pun di client bersama.
+const noSession = { auth: { persistSession: false, autoRefreshToken: false } };
+
 export const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
+  ? createClient(supabaseUrl, supabaseKey, noSession)
   : null as any;
 
 export const supabaseAdmin = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
+  ? createClient(supabaseUrl, supabaseServiceKey, noSession)
   : null as any;
 
 const app = express();
@@ -89,6 +92,197 @@ async function uploadToUploadcare(base64Data: string, filename: string, _fileTyp
   return uploadFile(base64Data, filename, _fileType);
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// OTORISASI TERPUSAT
+// Semua request ke /api lewat sini SEBELUM route. Aturan:
+//  • GET  → publik, kecuali yang terdaftar di GET_RULES (data pribadi / internal)
+//  • POST/PUT/DELETE → WAJIB login. Hanya yang ada di PUBLIC_WRITES yang terbuka.
+//  • Route tulis yang tidak terdaftar di mana pun → default khusus admin (aman secara default)
+// Role: 'admin' (DKC), 'user' (DKR Kecamatan), 'saka'.
+// ══════════════════════════════════════════════════════════════════════
+type AuthCtx = { userId: string; role: 'admin' | 'user' | 'saka'; kecamatan_id: string | null; saka_id: string | null };
+const authOf = (req: Request) => (req as any).auth as AuthCtx;
+
+class HttpError extends Error {
+  constructor(public status: number, message: string, public code?: string) { super(message); }
+}
+const deny = (msg = 'Anda tidak memiliki akses untuk tindakan ini.') => new HttpError(403, msg);
+
+async function loadAuth(req: Request): Promise<AuthCtx> {
+  if (!supabaseAdmin) throw new HttpError(500, 'Supabase belum dikonfigurasi');
+  const h = String(req.headers.authorization || '');
+  const token = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  if (!token) throw new HttpError(401, 'Sesi login tidak ditemukan. Silakan login ulang.', 'NO_TOKEN');
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  if (error || !data?.user) throw new HttpError(401, 'Sesi login sudah berakhir. Silakan login ulang.', 'TOKEN_EXPIRED');
+  const { data: profile } = await supabaseAdmin
+    .from('profiles').select('role, kecamatan_id, saka_id').eq('user_id', data.user.id).maybeSingle();
+  if (!profile) throw new HttpError(403, 'Akun ini belum memiliki profil pengguna.');
+  return { userId: data.user.id, role: profile.role, kecamatan_id: profile.kecamatan_id || null, saka_id: profile.saka_id || null };
+}
+
+// Apakah data (payload atau baris DB) milik user ini? Admin boleh semua; baris tanpa pemilik (level DKC) hanya admin.
+function ownsRow(a: AuthCtx, row: { kecamatan_id?: any; saka_id?: any } | null | undefined): boolean {
+  if (!row) return false;
+  if (a.role === 'admin') return true;
+  if (a.role === 'user') return !!a.kecamatan_id && row.kecamatan_id === a.kecamatan_id && !row.saka_id;
+  if (a.role === 'saka') return !!a.saka_id && row.saka_id === a.saka_id && !row.kecamatan_id;
+  return false;
+}
+
+// Non-admin: paksa kepemilikan sesuai akunnya, apa pun yang dikirim client.
+function forceOwner(a: AuthCtx, body: any) {
+  if (a.role === 'user') { body.kecamatan_id = a.kecamatan_id; delete body.saka_id; }
+  else if (a.role === 'saka') { body.saka_id = a.saka_id; delete body.kecamatan_id; }
+}
+
+async function assertRowOwned(a: AuthCtx, table: string, id: any) {
+  if (a.role === 'admin') return;
+  if (!id) throw new HttpError(400, 'ID wajib diisi');
+  const { data: row } = await supabaseAdmin.from(table).select('*').eq('id', id).maybeSingle();
+  if (!row) throw new HttpError(404, 'Data tidak ditemukan');
+  if (!ownsRow(a, row)) throw deny('Anda tidak memiliki akses ke data ini.');
+}
+
+// Simpan (insert/update) data milik kwarran/saka: create → cek payload, update → cek baris lama.
+async function guardSave(a: AuthCtx, table: string, body: any) {
+  if (a.role === 'admin') return;
+  if (body.id) await assertRowOwned(a, table, body.id);
+  else if (!ownsRow(a, body)) throw deny('Anda hanya boleh menambah data untuk kwarran/saka Anda sendiri.');
+  forceOwner(a, body);
+}
+
+type Access = 'admin' | 'user' | 'owner';
+type Rule = {
+  method: string;
+  re: RegExp;
+  access: Access;
+  roles?: Array<AuthCtx['role']>;                   // untuk access 'user': role yang diizinkan
+  check?: (req: Request, a: AuthCtx, m: RegExpMatchArray) => Promise<void>;
+};
+
+const PUBLIC_WRITES: Array<[string, RegExp]> = [
+  ['POST', /^\/auth\/login$/],
+  ['POST', /^\/auth\/refresh$/],
+  ['POST', /^\/auth\/change-password$/],           // memverifikasi token sendiri
+  ['POST', /^\/upload$/],                           // dipakai form pendaftaran publik (bukti bayar)
+  ['POST', /^\/upload\/uploadcare$/],
+  ['POST', /^\/pangkalan\/register$/],              // form pendaftaran publik
+  ['POST', /^\/berita\/[^/]+\/like$/],
+  ['POST', /^\/agenda\/[^/]+\/register$/],
+  ['POST', /^\/agenda\/[^/]+\/register-batch$/],
+];
+
+const GET_RULES: Rule[] = [
+  { method: 'GET', re: /^\/users$/, access: 'admin' },
+  { method: 'GET', re: /^\/surat-dkr$/, access: 'user', roles: ['admin', 'user'] },
+  { method: 'GET', re: /^\/agenda\/[^/]+\/registrants$/, access: 'user', roles: ['admin', 'user'] },
+  { method: 'GET', re: /^\/tagihan_kolektif$/, access: 'user', roles: ['admin', 'user'] },
+];
+
+const ownerBody = (table: string, opts: { status?: boolean } = {}) =>
+  async (req: Request, a: AuthCtx) => {
+    await guardSave(a, table, req.body);
+    if (opts.status && a.role !== 'admin') {
+      // Non-admin tidak boleh menyetujui/menerbitkan sendiri
+      req.body.status = req.body.status === 'draft' ? 'draft' : 'pending';
+    }
+  };
+const ownerRowById = (table: string) =>
+  async (req: Request, a: AuthCtx) => { await assertRowOwned(a, table, req.body?.id); };
+const ownerRowByParam = (table: string) =>
+  async (req: Request, a: AuthCtx, m: RegExpMatchArray) => { await assertRowOwned(a, table, m[1]); };
+const ownerFromBody = (field: 'kecamatan_id' | 'saka_id') =>
+  async (req: Request, a: AuthCtx) => {
+    if (a.role === 'admin') return;
+    if (a[field] !== req.body?.[field] || !a[field]) throw deny('Anda hanya boleh mengubah data milik Anda sendiri.');
+  };
+
+const WRITE_RULES: Rule[] = [
+  // ── Khusus admin DKC ──
+  ...([
+    ['POST', /^\/kecamatan\/toggle-active$/], ['POST', /^\/kecamatan\/wilayah-batch$/], ['POST', /^\/saka\/toggle-active$/],
+    ['POST', /^\/dkc\/update$/], ['POST', /^\/wilayah\/save$/], ['POST', /^\/berita\/status$/],
+    ['POST', /^\/informasi\/save$/], ['POST', /^\/informasi\/delete$/], ['POST', /^\/site_content\/save$/],
+    ['POST', /^\/users\/reset_password$/], ['POST', /^\/users\/save$/],
+    ['POST', /^\/laporan_kegiatan\/process$/],
+    ['POST', /^\/tagihan_kolektif\/(status|sync|upsert)$/],
+    ['POST', /^\/pendaftaran\/(checkin|lunas)\/[^/]+$/],
+    ['POST', /^\/agenda\/[^/]+\/config$/], ['PUT', /^\/agenda\/[^/]+\/dashboard_config$/],
+    ['POST', /^\/surat-dkr\/(read|status)$/],
+  ] as Array<[string, RegExp]>).map(([method, re]): Rule => ({ method, re, access: 'admin' })),
+
+  // ── Milik kwarran / saka sendiri (atau admin) ──
+  { method: 'POST', re: /^\/dkr_profile\/update$/, access: 'owner', roles: ['user'], check: async (r, a) => ownerFromBody('kecamatan_id')(r, a) },
+  { method: 'POST', re: /^\/saka_profile\/update$/, access: 'owner', roles: ['saka'], check: async (r, a) => ownerFromBody('saka_id')(r, a) },
+
+  { method: 'POST', re: /^\/personalia\/save$/, access: 'owner', roles: ['user', 'saka'], check: ownerBody('personalia') },
+  { method: 'POST', re: /^\/personalia\/update$/, access: 'owner', roles: ['user', 'saka'], check: ownerRowById('personalia') },
+  { method: 'POST', re: /^\/personalia\/delete$/, access: 'owner', roles: ['user', 'saka'], check: ownerRowById('personalia') },
+
+  { method: 'POST', re: /^\/pangkalan\/save$/, access: 'owner', roles: ['user', 'saka'], check: ownerBody('pangkalan') },
+  { method: 'POST', re: /^\/pangkalan\/delete$/, access: 'owner', roles: ['user', 'saka'], check: ownerRowById('pangkalan') },
+
+  { method: 'POST', re: /^\/data_potensial\/save$/, access: 'owner', roles: ['user', 'saka'], check: ownerBody('data_potensial') },
+
+  { method: 'POST', re: /^\/berita\/save$/, access: 'owner', roles: ['user', 'saka'], check: async (req, a) => {
+      await ownerBody('berita', { status: true })(req, a);
+      if (a.role !== 'admin') { req.body.author_id = a.userId; delete req.body.likes; }
+    } },
+  { method: 'POST', re: /^\/berita\/delete$/, access: 'owner', roles: ['user', 'saka'], check: ownerRowById('berita') },
+
+  { method: 'POST', re: /^\/agenda\/save$/, access: 'owner', roles: ['user', 'saka'], check: ownerBody('agenda_kegiatan') },
+  { method: 'POST', re: /^\/agenda\/delete$/, access: 'owner', roles: ['user', 'saka'], check: ownerRowById('agenda_kegiatan') },
+
+  { method: 'PUT', re: /^\/registrants\/([^/]+)$/, access: 'owner', roles: ['user'], check: ownerRowByParam('pendaftaran_peserta') },
+  { method: 'DELETE', re: /^\/registrants\/([^/]+)$/, access: 'owner', roles: ['user'], check: ownerRowByParam('pendaftaran_peserta') },
+
+  // Status dipaksa 'draft'/'pending' untuk non-admin (diterima/ditolak/revisi hanya lewat /process oleh admin)
+  { method: 'POST', re: /^\/laporan_kegiatan\/save$/, access: 'owner', roles: ['user'], check: ownerBody('laporan_kegiatan', { status: true }) },
+  { method: 'POST', re: /^\/tagihan_kolektif\/bayar$/, access: 'owner', roles: ['user'], check: ownerRowById('tagihan_kolektif') },
+
+  // ── Surat DKR → DKC: DKR hanya menyentuh suratnya sendiri ──
+  { method: 'POST', re: /^\/surat-dkr\/(save|seen|delete)$/, access: 'owner', roles: ['user'], check: async (req, a) => {
+      if (a.role === 'user') req.body.kecamatan_id = a.kecamatan_id; // paksa; handler lalu membatasi ke kecamatan ini
+    } },
+];
+
+app.use('/api', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (req.method === 'OPTIONS' || req.method === 'HEAD') return next();
+    const path = req.path;
+
+    if (req.method === 'GET') {
+      const rule = GET_RULES.find(r => r.re.test(path));
+      if (!rule) return next(); // GET publik
+      const a = await loadAuth(req);
+      (req as any).auth = a;
+      if (rule.access === 'admin' && a.role !== 'admin') throw deny();
+      if (rule.roles && !rule.roles.includes(a.role)) throw deny();
+      return next();
+    }
+
+    if (PUBLIC_WRITES.some(([m, re]) => m === req.method && re.test(path))) return next();
+
+    const a = await loadAuth(req);
+    (req as any).auth = a;
+    if (a.role === 'admin') {
+      // Admin boleh semua, tapi tetap lewat rule agar body disanitasi bila perlu (mis. surat-dkr)
+      return next();
+    }
+
+    const rule = WRITE_RULES.find(r => r.method === req.method && r.re.test(path));
+    if (!rule || rule.access === 'admin') throw deny();               // default: khusus admin
+    if (rule.roles && !rule.roles.includes(a.role)) throw deny();
+    if (rule.check) await rule.check(req, a, path.match(rule.re)!);
+    next();
+  } catch (e: any) {
+    if (e instanceof HttpError) return res.status(e.status).json({ error: e.message, code: e.code });
+    console.error('Authz error:', e);
+    res.status(500).json({ error: e.message || 'Gagal memeriksa akses' });
+  }
+});
+
 // ── Health ──
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', supabaseConfigured: !!process.env.SUPABASE_URL });
@@ -100,7 +294,9 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!supabase) return res.status(500).json({ error: 'Supabase not configured' });
 
-    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({ email, password });
+    // Login memakai client anon terpisah (bukan supabaseAdmin) supaya sesi user tidak "menempel" ke client service-role.
+    const loginClient = createClient(supabaseUrl, supabaseKey, noSession);
+    const { data: authData, error: authError } = await loginClient.auth.signInWithPassword({ email, password });
     if (authError || !authData.user) {
       return res.status(401).json({ error: authError?.message || 'Email atau password salah' });
     }
@@ -120,6 +316,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 
     res.json({
       token: authData.session?.access_token,
+      refresh_token: authData.session?.refresh_token,
       user: profile,
       kecamatan,
       saka
@@ -127,6 +324,20 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ error: error.message || 'Login gagal' });
+  }
+});
+
+// Tukar refresh token dengan access token baru (access token Supabase hanya berlaku ±1 jam)
+app.post('/api/auth/refresh', async (req: Request, res: Response) => {
+  try {
+    const refresh_token = String(req.body?.refresh_token || '');
+    if (!refresh_token) return res.status(400).json({ error: 'refresh_token wajib diisi' });
+    const client = createClient(supabaseUrl, supabaseKey, noSession);
+    const { data, error } = await client.auth.refreshSession({ refresh_token });
+    if (error || !data.session) return res.status(401).json({ error: 'Sesi habis. Silakan login ulang.', code: 'REFRESH_FAILED' });
+    res.json({ token: data.session.access_token, refresh_token: data.session.refresh_token });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -401,7 +612,9 @@ const SURAT_STATUS_RESPON = ['dibaca', 'diterima', 'akan_hadir', 'diwakilkan', '
 // Daftar surat. Dengan ?kecamatan_id= → surat milik DKR itu; tanpa filter → semua (dashboard admin DKC)
 app.get('/api/surat-dkr', async (req: Request, res: Response) => {
   try {
-    const { kecamatan_id } = req.query;
+    const a = authOf(req);
+    // DKR hanya boleh melihat surat kecamatannya sendiri (abaikan ?kecamatan_id= dari client)
+    const kecamatan_id = a.role === 'user' ? a.kecamatan_id : req.query.kecamatan_id;
     let query = supabaseAdmin.from('surat_dkr').select('*').order('created_at', { ascending: false }).limit(500);
     if (kecamatan_id) query = query.eq('kecamatan_id', kecamatan_id as string);
     const { data, error } = await query;
@@ -1042,7 +1255,10 @@ app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
 app.get('/api/agenda/:id/registrants', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data } = await supabaseAdmin.from('pendaftaran_peserta').select('*').eq('agenda_id', id);
+    const a = authOf(req);
+    let query = supabaseAdmin.from('pendaftaran_peserta').select('*').eq('agenda_id', id);
+    if (a.role === 'user') query = query.eq('kecamatan_id', a.kecamatan_id); // DKR hanya data pesertanya sendiri
+    const { data } = await query;
     res.json(data || []);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1459,7 +1675,9 @@ app.post('/api/tagihan_kolektif/sync', async (req: Request, res: Response) => {
 
 app.get('/api/tagihan_kolektif', async (req: Request, res: Response) => {
   try {
-    const { agenda_id, kecamatan_id } = req.query;
+    const a = authOf(req);
+    const { agenda_id } = req.query;
+    const kecamatan_id = a.role === 'user' ? a.kecamatan_id : req.query.kecamatan_id;
     let query = supabaseAdmin.from('tagihan_kolektif').select('*');
     if (agenda_id) query = query.eq('agenda_id', agenda_id as string);
     if (kecamatan_id) query = query.eq('kecamatan_id', kecamatan_id as string);

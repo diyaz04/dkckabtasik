@@ -29,6 +29,7 @@ export default function LoginPortal() {
 
       // Store in local storage
       localStorage.setItem('dkc_token', resData.token);
+      if (resData.refresh_token) localStorage.setItem('dkc_refresh', resData.refresh_token);
       localStorage.setItem('dkc_user', JSON.stringify(resData.user));
       if (resData.kecamatan) {
         localStorage.setItem('dkc_keca', JSON.stringify(resData.kecamatan));
