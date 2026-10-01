@@ -1,23 +1,15 @@
-import {StrictMode, Suspense, lazy} from 'react';
+import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { isNativeApp } from './native/platform';
-import { installApiBase } from './native/apiBase';
+import { installAuthFetch } from './utils/authFetch';
 
-installApiBase();
-
-// Tampilan mobile dimuat terpisah supaya web biasa tidak ikut membawa kodenya.
-const MobileApp = lazy(() => import('./native/MobileApp'));
+// Semua request /api otomatis membawa token login + refresh otomatis.
+// Sesi habis → kembali ke halaman login portal.
+installAuthFetch({ onExpired: () => { window.location.hash = '#/portal/login'; } });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isNativeApp ? (
-      <Suspense fallback={null}>
-        <MobileApp />
-      </Suspense>
-    ) : (
-      <App />
-    )}
+    <App />
   </StrictMode>,
 );
