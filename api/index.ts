@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { randomInt } from 'node:crypto';
 import { v2 as cloudinary } from 'cloudinary';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -1524,8 +1525,9 @@ app.post('/api/users/reset_password', async (req: Request, res: Response) => {
     const { user_id } = req.body;
     if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    // Generate random 8 character alphanumeric password
-    const newPassword = Math.random().toString(36).slice(-8);
+    // Kata sandi sementara 10 karakter dari CSPRNG (tanpa karakter yang mudah tertukar: 0/O, 1/l/I)
+    const ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const newPassword = Array.from({ length: 10 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
 
     const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
       password: newPassword,
