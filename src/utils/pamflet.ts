@@ -70,7 +70,8 @@ export async function downloadPamflet(elementId: string, fileName: string): Prom
 
     const canvas = await html2canvas(clone, {
       useCORS: true,
-      scale: 2.5,
+      // Template admin sudah 1080px lebar (resolusi penuh); desain bawaan ~370px perlu diperbesar
+      scale: width >= 1000 ? 1 : 2.5,
       backgroundColor: '#ffffff',
       logging: false,
     });

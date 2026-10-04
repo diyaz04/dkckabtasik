@@ -1,5 +1,6 @@
 import QRCode from 'react-qr-code';
 import { downloadPamflet } from '../utils/pamflet';
+import PamfletCard from './PamfletCard';
 import { showAlert as alert } from '../utils/dialog';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import PangkalanInput, { isPangkalanField, savePangkalanFromRows } from './PangkalanInput';
@@ -2296,107 +2297,19 @@ export default function LandingPage() {
                   👁️ Pratinjau Pamflet Gambar
                 </span>
 
-                {/* THE ACTUAL DOWNLOAD TARGET - Pure White, Highly Polished */}
-                <div 
-                  id="pamflet-render-target"
-                  className="w-full max-w-[370px] bg-white p-5 rounded-[24px] border border-slate-100 shadow-2xl flex flex-col justify-between relative select-none"
-                  style={{ minHeight: '520px' }}
-                >
-                  {/* Decorative Scout Fleur-de-lis Watermark Icon or Top Accent Bar */}
-                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-orange via-brand-green to-brand-brown-mid" />
-
-                  {/* 1. Header Row */}
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-brand-green/10 flex items-center justify-center border border-brand-green/20">
-                        <span className="text-brand-green text-sm">⚜</span>
-                      </div>
-                      <div>
-                        <h4 className="text-[10px] font-black text-brand-brown-dark tracking-wider uppercase font-mono leading-none">
-                          Warta Pramuka
-                        </h4>
-                        <p className="text-[8px] text-gray-400 font-bold font-mono tracking-wider mt-0.5 uppercase leading-none">
-                          DKC Tasikmalaya
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      {shareNews.saka_id ? (
-                        <span className="bg-brand-orange text-white text-[7px] font-black font-mono px-2 py-1 rounded-md uppercase tracking-wider shadow-sm">
-                          SAKA {shareNews.saka_nama}
-                        </span>
-                      ) : shareNews.kecamatan_id ? (
-                        <span className="bg-[#2E5C9A] text-white text-[7px] font-black font-mono px-2 py-1 rounded-md uppercase tracking-wider shadow-sm">
-                          DKR {shareNews.kecamatan_nama}
-                        </span>
-                      ) : (
-                        <span className="bg-gradient-to-r from-brand-orange to-brand-red text-white text-[7px] font-black font-mono px-2 py-1 rounded-md uppercase tracking-wider shadow-sm">
-                          KABAR DKC UTAMA
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 2. Featured Image Container */}
-                  <div className="relative h-40 w-full overflow-hidden bg-slate-100 rounded-xl border border-slate-150/60 shadow-inner">
-                    <img 
-                      src={shareNews.gambar_url || 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'} 
-                      alt={shareNews.judul}
-                      crossOrigin="anonymous"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const el = e.target as HTMLImageElement; if (!el.dataset.fallback) { el.dataset.fallback = '1'; el.src = 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800'; }
-                      }}
-                    />
-                  </div>
-
-                  {/* 3. News Title */}
-                  <div className="mt-3">
-                    <h3 className="font-extrabold text-sm text-slate-950 tracking-tight leading-snug uppercase">
-                      {shareNews.judul}
-                    </h3>
-                  </div>
-
-                  {/* 4. Short Excerpt with clean quotes-styled background */}
-                  <div className="mt-2.5 p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
-                    <p className="text-[10px] text-gray-500 leading-relaxed font-sans line-clamp-3 font-medium">
-                      "{stripHtml(shareNews.konten)}"
-                    </p>
-                  </div>
-
-                  {/* 5. Separator dot or brand accent lines */}
-                  <div className="flex items-center justify-center gap-1 my-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-green" />
-                    <span className="w-8 h-[2px] bg-brand-green/20" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-green" />
-                  </div>
-
-                  {/* 6. Footer segment with Metadata & QR code */}
-                  <div className="grid grid-cols-12 gap-3 items-center border-t border-slate-100 pt-3">
-                    {/* Left: Metadata details */}
-                    <div className="col-span-8 space-y-1 text-left">
-                      <div className="text-[8px] text-gray-400 font-mono font-bold leading-tight">
-                        DITERBITKAN: <span className="text-gray-600 font-extrabold">{new Date(shareNews.published_at).toLocaleDateString('id-ID')}</span>
-                      </div>
-                      <div className="text-[8px] text-gray-400 font-mono font-bold leading-tight">
-                        KONTRIBUTOR: <span className="text-brand-brown-dark font-extrabold">{shareNews.author_name}</span>
-                      </div>
-                      <p className="text-[8px] text-brand-green font-extrabold font-mono uppercase tracking-wider mt-1 leading-tight">
-                        Satyaku Kudarmakan, Darmaku Kubaktikan
-                      </p>
-                    </div>
-
-                    {/* Right: Beautiful QR Code frame */}
-                    <div className="col-span-4 flex flex-col items-center">
-                      <div className="bg-white p-1 rounded-lg border border-slate-200/80 shadow-sm">
-                        <QRCode value={window.location.origin + "/berita/" + shareNews.slug} size={48} />
-                      </div>
-                      <span className="text-[6px] font-mono font-bold text-gray-400 text-center tracking-wider block mt-1 uppercase leading-none">
-                        PINDAI LINK
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                {/* Pamflet: template unggahan admin, fallback ke desain bawaan */}
+                <PamfletCard data={{
+                  judul: shareNews.judul,
+                  excerpt: stripHtml(shareNews.konten),
+                  gambar_url: shareNews.gambar_url,
+                  saka_id: shareNews.saka_id,
+                  saka_nama: shareNews.saka_nama,
+                  kecamatan_id: shareNews.kecamatan_id,
+                  kecamatan_nama: shareNews.kecamatan_nama,
+                  author_name: shareNews.author_name,
+                  dateText: new Date(shareNews.published_at).toLocaleDateString('id-ID'),
+                  qrValue: window.location.origin + "/berita/" + shareNews.slug,
+                }} />
               </div>
 
               {/* Right Pane: Premium Controls and Action Panel */}

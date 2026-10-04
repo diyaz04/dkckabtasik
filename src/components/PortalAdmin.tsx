@@ -3,6 +3,7 @@ import { showAlert as alert, showConfirm } from '../utils/dialog';
 import { ensureCoreFields } from '../utils/coreFields';
 import SuratAdminPanel from './SuratAdminPanel';
 import FooterKontakEditor from './FooterKontakEditor';
+import PamfletTemplateEditor from './PamfletTemplateEditor';
 import SejarahDkcEditor from './SejarahDkcEditor';
 import PengumumanEditor from './PengumumanEditor';
 import VisibilityToggleCard from './VisibilityToggleCard';
@@ -4160,6 +4161,9 @@ export default function PortalAdmin() {
 
             {/* Kontak footer (alamat, email, telp) */}
             <FooterKontakEditor />
+
+            {/* Template pamflet berita (fallback ke desain bawaan bila kosong) */}
+            <PamfletTemplateEditor />
 
             {/* Sejarah DKC dari masa ke masa (tampil di section profil landingpage) */}
             <SejarahDkcEditor />
