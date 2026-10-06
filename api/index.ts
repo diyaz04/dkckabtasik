@@ -1030,12 +1030,30 @@ app.get('/api/agenda', async (_req: Request, res: Response) => {
 
 app.post('/api/agenda/save', async (req: Request, res: Response) => {
   try {
-    const data = req.body;
+    const data = { ...req.body };
+    // Riwayat: sekali pendaftaran pernah dibuka, flag ini tidak bisa dimundurkan lewat API
+    delete data.pernah_aktif;
+    delete data.ditarik_dkr; // hanya diubah lewat /agenda/tarik atau pengaktifan ulang
+    if (data.is_aktif_pendaftaran === true) { data.pernah_aktif = true; data.ditarik_dkr = false; }
     if (data.id) {
       await supabaseAdmin.from('agenda_kegiatan').update(data).eq('id', data.id);
     } else {
       await supabaseAdmin.from('agenda_kegiatan').insert(data);
     }
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Admin DKC menarik kegiatan dari dashboard DKR (mis. ada kesalahan). Pendaftaran ikut ditutup;
+// kegiatan muncul kembali di DKR begitu pendaftarannya diaktifkan lagi lewat /agenda/save.
+app.post('/api/agenda/tarik', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'id wajib diisi' });
+    const { error } = await supabaseAdmin.from('agenda_kegiatan').update({ ditarik_dkr: true, is_aktif_pendaftaran: false }).eq('id', id);
+    if (error) throw error;
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

@@ -138,6 +138,8 @@ export interface AgendaKegiatan {
   saka_nama?: string;
   status_publikasi: boolean;
   is_aktif_pendaftaran: boolean;
+  pernah_aktif?: boolean; // pendaftaran pernah dibuka
+  ditarik_dkr?: boolean; // ditarik admin dari dashboard DKR sampai diaktifkan lagi
   is_tanggal_diputuskan?: boolean;
   bulan_rencana?: string; // Format: 'YYYY-MM', e.g. '2026-08'
   camp_fee?: number;

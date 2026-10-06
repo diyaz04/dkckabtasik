@@ -1075,12 +1075,30 @@ export default function PortalAdmin() {
     }
   };
 
+  // Tarik kegiatan dari dashboard DKR (pendaftaran ditutup; muncul lagi saat diaktifkan kembali)
+  const handleTarikDariDkr = async (agenda: AgendaKegiatan) => {
+    if (!await showConfirm(`Tarik "${agenda.nama_kegiatan}" dari dashboard DKR? Pendaftaran akan ditutup dan kegiatan baru muncul lagi di DKR setelah pendaftarannya diaktifkan kembali. Data pendaftar dan tagihan tetap aman.`)) return;
+    try {
+      const res = await fetch('/api/agenda/tarik', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: agenda.id })
+      });
+      if (!res.ok) throw new Error('tarik gagal');
+      setAgendaList(prev => prev.map(a => a.id === agenda.id ? { ...a, ditarik_dkr: true, is_aktif_pendaftaran: false } : a));
+      alert('Kegiatan ditarik dari dashboard DKR.');
+    } catch (e) {
+      console.error(e);
+      alert('Gagal menarik kegiatan dari dashboard DKR. Coba lagi.');
+    }
+  };
+
   // Toggle Pendaftaran Aktif (optimistic: switch langsung bergeser, rollback jika gagal)
   const handleTogglePendaftaran = async (agenda: AgendaKegiatan) => {
     if (togglingAgendaId === agenda.id) return;
     const next = !agenda.is_aktif_pendaftaran;
     setTogglingAgendaId(agenda.id);
-    setAgendaList(prev => prev.map(a => a.id === agenda.id ? { ...a, is_aktif_pendaftaran: next } : a));
+    setAgendaList(prev => prev.map(a => a.id === agenda.id ? { ...a, is_aktif_pendaftaran: next, ...(next ? { pernah_aktif: true, ditarik_dkr: false } : {}) } : a));
     try {
       const res = await fetch('/api/agenda/save', {
         method: 'POST',
@@ -3370,6 +3388,11 @@ export default function PortalAdmin() {
                             <span className="bg-gray-200 text-gray-600 font-bold px-2 py-0.5 rounded text-[9px] uppercase border">
                               {a.jenis}
                             </span>
+                            {a.ditarik_dkr && (
+                              <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded text-[9px] uppercase border border-red-200">
+                                Ditarik dari DKR
+                              </span>
+                            )}
                           </div>
                           <h4 className="font-extrabold text-sm text-brand-brown-dark tracking-tight leading-snug">{a.nama_kegiatan}</h4>
                           <p className="text-[10px] text-gray-400 mt-1">📍 {a.tempat} | 📅 {a.tanggal_mulai} s.d {a.tanggal_selesai}</p>
@@ -3401,6 +3424,16 @@ export default function PortalAdmin() {
                               }`} />
                             </button>
                           </div>
+
+                          {!a.ditarik_dkr && (a.is_aktif_pendaftaran || a.pernah_aktif) && (
+                            <button
+                              onClick={() => handleTarikDariDkr(a)}
+                              title="Sembunyikan dari dashboard DKR sampai diaktifkan lagi"
+                              className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold p-2 rounded-xl text-[10px] transition-all cursor-pointer"
+                            >
+                              Tarik dari DKR
+                            </button>
+                          )}
 
                           {/* Open Form Config Builder */}
                           <button

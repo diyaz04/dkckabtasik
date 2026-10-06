@@ -168,6 +168,8 @@ create table if not exists agenda_kegiatan (
   saka_nama text,
   status_publikasi boolean not null default false,
   is_aktif_pendaftaran boolean not null default false,
+  pernah_aktif boolean not null default false,  -- pendaftaran pernah dibuka (riwayat)
+  ditarik_dkr boolean not null default false,   -- ditarik admin dari dashboard DKR sampai diaktifkan lagi
   is_tanggal_diputuskan boolean default true,
   bulan_rencana text,                   -- format 'YYYY-MM'
   is_camp_fee_required boolean not null default false,

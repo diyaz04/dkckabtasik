@@ -21,6 +21,24 @@ import LaporanPdfTemplate from './LaporanPdfTemplate';
 // html2pdf loaded dynamically
 import GreetingBanner from './GreetingBanner';
 
+// Kegiatan sudah selesai bila tanggal selesainya (atau tanggal mulai, jika tak ada) sudah lewat.
+const isKegiatanSelesai = (a: any) => {
+  const end = a.tanggal_selesai || a.tanggal_mulai;
+  if (!end) return false;
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return String(end).slice(0, 10) < today;
+};
+
+// Daftar tagihan/rekap pendaftar DKR: kegiatan dipublikasikan yang sedang atau PERNAH berstatus aktif
+// (pendaftaran pernah dibuka), kecuali yang ditarik admin DKC. Yang sudah lewat tetap tampil dengan label "Sudah selesai".
+const isKegiatanAktif = (a: any) =>
+  a.tipe_pendaftaran !== 'mandiri' && !!a.status_publikasi && !a.ditarik_dkr && (!!a.is_aktif_pendaftaran || !!a.pernah_aktif);
+
+const SelesaiBadge = () => (
+  <span className="ml-2 align-middle text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 uppercase tracking-wider">Sudah selesai</span>
+);
+
 export default function PortalDkr() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'potensial' | 'pangkalan' | 'berita' | 'agenda' | 'personalia' | 'password' | 'laporan' | 'tagihan_cabang' | 'surat'>('dashboard');
@@ -183,7 +201,7 @@ export default function PortalDkr() {
         }
         if (c.resBeritaData) setBerita(Array.isArray(c.resBeritaData) ? c.resBeritaData : (c.resData?.berita || []));
         if (c.tagihanData) setTagihanCabangList(c.tagihanData);
-        if (c.activeData) setActiveAgendas(c.activeData);
+        if (c.activeData) setActiveAgendas(c.activeData.filter(isKegiatanAktif));
         if (c.lapData) setLaporanList(c.lapData);
       } catch(e){}
     }
@@ -221,7 +239,7 @@ export default function PortalDkr() {
       }
 
       setTagihanCabangList(tagihanData || []);
-      const activeData = agData.filter((a: any) => a.tipe_pendaftaran !== 'mandiri' && a.status_publikasi);
+      const activeData = agData.filter(isKegiatanAktif);
       setActiveAgendas(activeData);
       
       const lapData = lapDataRaw.filter((l: any) => l.kecamatan_id === kecaObj.id);
@@ -1544,7 +1562,7 @@ export default function PortalDkr() {
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-6">
                 <div className="flex justify-between items-center border-b pb-4">
                   <div>
-                    <h3 className="font-extrabold text-lg text-brand-brown-dark">{selectedTagihan.agenda_nama}</h3>
+                    <h3 className="font-extrabold text-lg text-brand-brown-dark">{selectedTagihan.agenda_nama}{isKegiatanSelesai(activeAgendas.find((a: any) => a.id === selectedTagihan.agenda_id) || {}) && <SelesaiBadge />}</h3>
                     <p className="text-xs text-gray-500 font-mono">Status: <span className={`font-bold px-2 py-0.5 rounded uppercase ${selectedTagihan.status === 'lunas' ? 'bg-green-100 text-green-700' : selectedTagihan.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{selectedTagihan.status}</span></p>
                   </div>
                   <button onClick={() => setSelectedTagihan(null)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl text-xs">Kembali</button>
@@ -1741,7 +1759,7 @@ export default function PortalDkr() {
   return (
                     <div key={agenda.id} className="p-4 bg-gray-50 border rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-xs font-mono">
                       <div>
-                        <strong className="text-brand-brown-dark text-sm block">{agenda.nama_kegiatan}</strong>
+                        <strong className="text-brand-brown-dark text-sm block">{agenda.nama_kegiatan}{isKegiatanSelesai(agenda) && <SelesaiBadge />}</strong>
                         {t.id ? (
                           <p className="text-gray-500 mt-1">Status Pembayaran: <span className={`font-bold px-2 py-0.5 rounded uppercase ${t.status === 'lunas' ? 'bg-green-100 text-green-700' : t.status === 'ditolak' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{t.status}</span></p>
                         ) : (
