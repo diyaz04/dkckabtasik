@@ -208,7 +208,7 @@ create table if not exists tagihan_kolektif (
   jumlah_peserta_terverifikasi int not null default 0,
   total_tagihan numeric not null default 0,
   bukti_bayar_url text,
-  status text not null default 'pending' check (status in ('pending', 'menunggu_verifikasi', 'lunas', 'ditolak')),
+  status text not null default 'belum_bayar' check (status in ('belum_bayar', 'menunggu_verifikasi', 'lunas', 'ditolak')),
   catatan text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

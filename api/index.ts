@@ -1743,6 +1743,14 @@ app.post('/api/tagihan_kolektif/bayar', async (req: Request, res: Response) => {
 app.post('/api/tagihan_kolektif/status', async (req: Request, res: Response) => {
   try {
     const { id, status, catatan } = req.body;
+    if (!id || !['lunas', 'ditolak'].includes(status)) {
+      return res.status(400).json({ error: 'id dan status (lunas/ditolak) wajib diisi' });
+    }
+    const { data: current } = await supabaseAdmin.from('tagihan_kolektif').select('status').eq('id', id).maybeSingle();
+    if (!current) return res.status(404).json({ error: 'Tagihan tidak ditemukan' });
+    if (current.status !== 'menunggu_verifikasi') {
+      return res.status(409).json({ error: 'Hanya tagihan berstatus menunggu verifikasi yang bisa diproses' });
+    }
     const { data: tagihan, error: errTagihan } = await supabaseAdmin.from('tagihan_kolektif')
       .update({ status, catatan: catatan || null, updated_at: new Date().toISOString() })
       .eq('id', id)

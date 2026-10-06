@@ -2454,9 +2454,9 @@ export default function PortalAdmin() {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ 
-                                        tagihan_id: rejectTagihanId, 
+                                        id: rejectTagihanId, 
                                         status: 'ditolak',
-                                        catatan_admin: rejectTagihanCatatan
+                                        catatan: rejectTagihanCatatan
                                       })
                                     });
                                     if (res.ok) {
@@ -2799,7 +2799,7 @@ export default function PortalAdmin() {
                         {agendaDashboardTab === 'tagihan_kwarran' ? (
                           <div className="space-y-4 font-mono text-xs text-gray-700">
                             {tagihanKwarranList.length > 0 ? tagihanKwarranList.map((tagihan) => {
-                              const kwarran = kecamatanList.find(k => k.id === tagihan.kwarran_id)?.nama || tagihan.kwarran_id;
+                              const kwarran = kecamatanList.find(k => k.id === tagihan.kecamatan_id)?.nama || tagihan.kecamatan_id;
                               return (
                                 <div key={tagihan.id} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                   <div>
@@ -2825,7 +2825,7 @@ export default function PortalAdmin() {
                                               const res = await fetch('/api/tagihan_kolektif/status', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ tagihan_id: tagihan.id, status: 'lunas' })
+                                                body: JSON.stringify({ id: tagihan.id, status: 'lunas' })
                                               });
                                               if (res.ok) {
                                                 const tagihanRes = await fetch(`/api/tagihan_kolektif?agenda_id=${selectedDashboardAgenda.id}`);

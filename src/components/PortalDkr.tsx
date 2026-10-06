@@ -1553,7 +1553,7 @@ export default function PortalDkr() {
                 {selectedTagihan.status === 'ditolak' && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                     <p className="font-bold text-red-700 text-xs mb-1">Ditolak oleh Cabang:</p>
-                    <p className="text-red-600 text-xs italic">{selectedTagihan.catatan_admin || 'Tidak ada alasan'}</p>
+                    <p className="text-red-600 text-xs italic">{selectedTagihan.catatan || 'Tidak ada alasan'}</p>
                     <p className="text-red-500 text-[10px] mt-2">Silakan perbaiki dan upload ulang bukti pembayaran.</p>
                   </div>
                 )}
