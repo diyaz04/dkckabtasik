@@ -959,7 +959,9 @@ app.post('/api/berita/save', async (req: Request, res: Response) => {
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
-    data.slug = `${baseSlug}-${Date.now()}`;
+    // Slug dibuat sekali saat berita baru; edit tidak boleh mengubahnya agar tautan/QR yang sudah dibagikan tetap jalan
+    if (data.id) delete data.slug;
+    else data.slug = `${baseSlug}-${Date.now()}`;
 
     let dbError;
     if (data.id) {

@@ -4,6 +4,7 @@ import { ensureCoreFields } from '../utils/coreFields';
 import SuratAdminPanel from './SuratAdminPanel';
 import FooterKontakEditor from './FooterKontakEditor';
 import PamfletTemplateEditor from './PamfletTemplateEditor';
+import BeritaReviewModal from './BeritaReviewModal';
 import SejarahDkcEditor from './SejarahDkcEditor';
 import PengumumanEditor from './PengumumanEditor';
 import VisibilityToggleCard from './VisibilityToggleCard';
@@ -47,6 +48,7 @@ export default function PortalAdmin() {
   const [sakaList, setSakaList] = useState<Saka[]>([]);
   const [dataPotensial, setDataPotensial] = useState<DataPotensial[]>([]);
   const [beritaList, setBeritaList] = useState<Berita[]>([]);
+  const [reviewBerita, setReviewBerita] = useState<Berita | null>(null);
   const [agendaList, setAgendaList] = useState<AgendaKegiatan[]>([]);
   const [userList, setUserList] = useState<any[]>([]);
   const [siteContent, setSiteContent] = useState<SiteContent[]>([]);
@@ -2190,11 +2192,15 @@ export default function PortalAdmin() {
         )}
 
         {/* TAB 3: KELOLA BERITA (Approval & Creator) */}
+        {reviewBerita && (
+          <BeritaReviewModal berita={reviewBerita} onClose={() => setReviewBerita(null)} onDone={loadData} />
+        )}
+
         {activeTab === 'berita' && (
           <div className="space-y-8">
             <div className="border-b border-gray-200 pb-4">
               <h1 className="text-2xl font-display font-extrabold text-brand-brown-dark tracking-tight">Kanal Berita & Publikasi</h1>
-              <p className="text-xs text-gray-500 font-mono mt-1">Approve kontribusi berita DKR, atau tulis berita resmi Dewan Kerja Cabang.</p>
+              <p className="text-xs text-gray-500 font-mono mt-1">Tinjau, edit, dan approve kontribusi berita DKR/Saka, atau tulis berita resmi Dewan Kerja Cabang.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -2202,7 +2208,7 @@ export default function PortalAdmin() {
               {/* News Approval Queue */}
               <div className="space-y-5">
                 <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-orange pb-2">
-                  Antrean Persetujuan (Kontribusi DKR)
+                  Antrean Persetujuan (Kontribusi DKR & Saka)
                 </h3>
                 
                 {beritaList.filter(b => b.status === 'pending').length > 0 ? (
@@ -2215,14 +2221,21 @@ export default function PortalAdmin() {
                           </div>
                           <div>
                             <span className="bg-[#2E5C9A]/15 text-[#2E5C9A] border border-[#2E5C9A]/20 text-[9px] font-bold px-2 py-0.5 rounded-full font-mono uppercase block w-max mb-1.5">
-                              DKR {b.kecamatan_nama}
+                              {b.saka_id ? `SAKA ${b.saka_nama ?? ''}` : `DKR ${b.kecamatan_nama ?? ''}`}
                             </span>
                             <h4 className="font-extrabold text-sm text-brand-brown-dark tracking-tight leading-tight">{b.judul}</h4>
                             <p className="text-[10px] text-gray-400 font-mono mt-1">Diajukan oleh: {b.author_name}</p>
+                            <p className="text-[11px] text-gray-500 mt-1.5 line-clamp-2">{(b.konten || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}</p>
                           </div>
                         </div>
 
                         <div className="flex gap-2 justify-end pt-3 border-t border-gray-50">
+                          <button
+                            onClick={() => setReviewBerita(b)}
+                            className="bg-brand-brown-dark/5 hover:bg-brand-brown-dark/10 text-brand-brown-dark border border-brand-brown-dark/15 font-bold px-3.5 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            Baca & Edit
+                          </button>
                           <button
                             onClick={() => handleApproveNews(b.id, 'rejected')}
                             className="bg-brand-red/10 hover:bg-brand-red/20 text-brand-red border border-brand-red/20 font-bold px-3.5 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center gap-1 cursor-pointer"
@@ -2241,7 +2254,7 @@ export default function PortalAdmin() {
                   </div>
                 ) : (
                   <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center text-gray-500 italic text-xs font-mono">
-                    Tidak ada kiriman berita pending dari DKR saat ini.
+                    Tidak ada kiriman berita pending dari DKR/Saka saat ini.
                   </div>
                 )}
               </div>
