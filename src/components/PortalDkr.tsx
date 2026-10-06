@@ -786,21 +786,22 @@ export default function PortalDkr() {
 
   const getPesertaName = (data: any, schema?: any[]): string => {
     if (!data) return 'Tanpa Nama';
+    // Field inti form pendaftaran: nama peserta selalu di 'nama_lengkap' (bukan nama kwarran/pangkalan/orang tua)
+    const direct = data.nama_lengkap || data.nama || data.nama_peserta || data.full_name;
+    if (direct) return String(direct);
+    // Form lama tanpa field inti: cari field berlabel "nama" yang bukan nama wilayah/lembaga/keluarga
     const activeSchema = schema || agendaFormSchema;
     if (activeSchema && activeSchema.length > 0) {
-      // Try to find field labeled "Nama" (or similar) first
-      const namaField = activeSchema.find((f: any) => 
-        f.label?.toLowerCase().includes('nama') || f.label?.toLowerCase().includes('name')
+      const bukanPeserta = /kwarran|kwartir|kecamatan|ranting|pangkalan|gudep|sekolah|ayah|ibu|orangs*tua|wali|pembina|pembimbing|kegiatan/i;
+      const namaField = activeSchema.find((f: any) =>
+        /nama|name/i.test(f.label || '') && !bukanPeserta.test(f.label || '') && data[f.id]
       );
-      if (namaField && data[namaField.id]) return data[namaField.id];
-      // Fall back to first field's value
-      const firstField = activeSchema[0];
-      if (firstField && data[firstField.id]) return data[firstField.id];
+      if (namaField) return String(data[namaField.id]);
     }
-    // Direct key fallback
-    return data.nama || data.nama_lengkap || data.nama_peserta || data.full_name || (Object.values(data)[0] as string) || 'Tanpa Nama';
+    const first = Object.entries(data).find(([k, v]) => !k.startsWith('_') && typeof v === 'string' && v);
+    return first ? String(first[1]) : 'Tanpa Nama';
   };
-  
+
   return (
     <div className="min-h-screen bg-dash-canvas flex flex-col md:flex-row">
       
