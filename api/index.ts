@@ -29,8 +29,8 @@ const allowedOrigins = new Set([
   'https://localhost',
   'http://localhost',
   'capacitor://localhost',
-  'http://localhost:3000',
-  'http://localhost:5173',
+  // Server dev lokal hanya diizinkan di luar produksi (Vercel menjalankan NODE_ENV=production)
+  ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3000', 'http://localhost:5173']),
   ...String(process.env.CORS_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean),
 ]);
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -240,7 +240,12 @@ const WRITE_RULES: Rule[] = [
 
   // Status dipaksa 'draft'/'pending' untuk non-admin (diterima/ditolak/revisi hanya lewat /process oleh admin)
   { method: 'POST', re: /^\/laporan_kegiatan\/save$/, access: 'owner', roles: ['user'], check: ownerBody('laporan_kegiatan', { status: true }) },
-  { method: 'POST', re: /^\/tagihan_kolektif\/bayar$/, access: 'owner', roles: ['user'], check: ownerRowById('tagihan_kolektif') },
+  { method: 'POST', re: /^\/tagihan_kolektif\/bayar$/, access: 'owner', roles: ['user'], check: async (req, a) => {
+    if (req.body?.id) return assertRowOwned(a, 'tagihan_kolektif', req.body.id);
+    // Tagihan belum terbentuk: DKR mengirim agenda_id, kwarran selalu diambil dari akunnya sendiri
+    if (!a.kecamatan_id) throw deny('Akun ini tidak terhubung ke kwartir ranting.');
+    req.body.kecamatan_id = a.kecamatan_id;
+  } },
 
   // ── Surat DKR → DKC: DKR hanya menyentuh suratnya sendiri ──
   { method: 'POST', re: /^\/surat-dkr\/(save|seen|delete)$/, access: 'owner', roles: ['user'], check: async (req, a) => {
@@ -1221,12 +1226,19 @@ app.post('/api/agenda/:id/config', async (req: Request, res: Response) => {
   }
 });
 
+/** Tipe pendaftaran kegiatan disimpan di form_kegiatan_config (bukan kolom agenda_kegiatan). */
+async function tipePendaftaranAgenda(agenda_id: string): Promise<string | null> {
+  const { data } = await supabaseAdmin.from('form_kegiatan_config').select('tipe_pendaftaran').eq('agenda_id', agenda_id).maybeSingle();
+  return data?.tipe_pendaftaran ?? null;
+}
+
 async function updateTagihanKolektif(agenda_id: string, kecamatan_id: string) {
   if (!agenda_id || !kecamatan_id) return;
   try {
-    const { data: agenda } = await supabaseAdmin.from('agenda_kegiatan').select('camp_fee, is_camp_fee_required, tipe_pendaftaran').eq('id', agenda_id).single();
+    // Dulu ikut memilih kolom tipe_pendaftaran yang tidak ada di tabel ini → query gagal → tagihan tidak pernah terbentuk
+    const { data: agenda } = await supabaseAdmin.from('agenda_kegiatan').select('camp_fee, is_camp_fee_required').eq('id', agenda_id).maybeSingle();
     if (!agenda || !agenda.is_camp_fee_required) return;
-    if (agenda.tipe_pendaftaran === 'mandiri') return; // pure mandiri doesn't have collective bill
+    if ((await tipePendaftaranAgenda(agenda_id)) === 'mandiri') return; // pure mandiri doesn't have collective bill
 
     const { data: registrants } = await supabaseAdmin.from('pendaftaran_peserta').select('id').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id);
     const count = registrants ? registrants.length : 0;
@@ -1683,7 +1695,8 @@ app.post('/api/tagihan_kolektif/sync', async (req: Request, res: Response) => {
     if (!kecamatan_id) return res.status(400).json({error: 'kecamatan_id required'});
     
     // Ambil semua agenda yang butuh tagihan
-    const { data: agendas } = await supabaseAdmin.from('agenda_kegiatan').select('*').eq('is_camp_fee_required', true).neq('tipe_pendaftaran', 'mandiri');
+    // Kegiatan khusus mandiri disaring di updateTagihanKolektif (tipe ada di form_kegiatan_config)
+    const { data: agendas } = await supabaseAdmin.from('agenda_kegiatan').select('id').eq('is_camp_fee_required', true);
     
     for (const agenda of (agendas || [])) {
       await updateTagihanKolektif(agenda.id, kecamatan_id);
@@ -1700,6 +1713,13 @@ app.get('/api/tagihan_kolektif', async (req: Request, res: Response) => {
     const a = authOf(req);
     const { agenda_id } = req.query;
     const kecamatan_id = a.role === 'user' ? a.kecamatan_id : req.query.kecamatan_id;
+    // DKR membuka daftar tagihan: lengkapi tagihan yang belum terbentuk untuk kegiatan berbayar yang punya peserta kwarran ini
+    if (a.role === 'user' && a.kecamatan_id) {
+      const { data: berbayar } = await supabaseAdmin.from('agenda_kegiatan').select('id').eq('is_camp_fee_required', true);
+      const { data: punya } = await supabaseAdmin.from('pendaftaran_peserta').select('agenda_id').eq('kecamatan_id', a.kecamatan_id);
+      const ids = new Set((punya || []).map((p: any) => p.agenda_id));
+      for (const ag of (berbayar || []).filter((g: any) => ids.has(g.id))) await updateTagihanKolektif(ag.id, a.kecamatan_id);
+    }
     let query = supabaseAdmin.from('tagihan_kolektif').select('*');
     if (agenda_id) query = query.eq('agenda_id', agenda_id as string);
     if (kecamatan_id) query = query.eq('kecamatan_id', kecamatan_id as string);
@@ -1746,9 +1766,33 @@ app.post('/api/tagihan_kolektif/upsert', async (req: Request, res: Response) => 
   }
 });
 
+// Bukti bayar hanya boleh dikirim saat tagihan belum dibayar atau ditolak admin.
+// Tagihan lunas / sedang diverifikasi tidak boleh "mundur" ke menunggu_verifikasi.
+export const TAGIHAN_BAYAR_DARI = ['belum_bayar', 'ditolak'];
+
 app.post('/api/tagihan_kolektif/bayar', async (req: Request, res: Response) => {
   try {
-    const { id, bukti_bayar_url } = req.body;
+    const { bukti_bayar_url, agenda_id, kecamatan_id } = req.body;
+    let id = req.body.id;
+    if (typeof bukti_bayar_url !== 'string' || !/^https?:\/\//i.test(bukti_bayar_url)) {
+      return res.status(400).json({ error: 'bukti_bayar_url (tautan gambar) wajib diisi' });
+    }
+    if (!id && agenda_id && kecamatan_id) {
+      // Tagihan belum terbentuk (mis. data lama): hitung & buat dari peserta yang sudah didaftarkan
+      await updateTagihanKolektif(agenda_id, kecamatan_id);
+      const { data: row } = await supabaseAdmin.from('tagihan_kolektif').select('id').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id).maybeSingle();
+      if (!row) return res.status(404).json({ error: 'Tagihan belum dapat dibuat. Pastikan sudah ada peserta dan kegiatan ini memungut biaya kolektif.' });
+      id = row.id;
+    }
+    if (!id) return res.status(400).json({ error: 'id tagihan atau agenda_id wajib diisi' });
+    const { data: current } = await supabaseAdmin.from('tagihan_kolektif').select('status').eq('id', id).maybeSingle();
+    if (!current) return res.status(404).json({ error: 'Tagihan tidak ditemukan' });
+    if (!TAGIHAN_BAYAR_DARI.includes(current.status || 'belum_bayar')) {
+      const msg = current.status === 'lunas'
+        ? 'Tagihan ini sudah lunas, bukti bayar tidak perlu dikirim lagi.'
+        : 'Bukti bayar sedang diverifikasi admin. Tunggu hasilnya sebelum mengirim ulang.';
+      return res.status(409).json({ error: msg });
+    }
     const { data, error } = await supabaseAdmin.from('tagihan_kolektif')
       .update({ bukti_bayar_url, status: 'menunggu_verifikasi', updated_at: new Date().toISOString() })
       .eq('id', id)
