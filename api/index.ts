@@ -85,7 +85,7 @@ async function uploadFile(base64Data: string, filename: string, _fileType: strin
       throw new Error(`Cloudinary error: ${e.message}`);
     }
   }
-  
+
   throw new Error('Cloudinary belum dikonfigurasi di Environment Variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)');
 }
 
@@ -495,7 +495,7 @@ app.post('/api/dkr_profile/update', async (req: Request, res: Response) => {
   try {
     const { kecamatan_id, deskripsi, logo_url, medsos_ig, medsos_yt, medsos_tk } = req.body;
     const { data: existing } = await supabaseAdmin.from('dkr_profile').select('id').eq('kecamatan_id', kecamatan_id).maybeSingle();
-    
+
     const updatePayload: any = { deskripsi, logo_url, updated_at: new Date().toISOString() };
     if (medsos_ig !== undefined) updatePayload.medsos_ig = medsos_ig;
     if (medsos_yt !== undefined) updatePayload.medsos_yt = medsos_yt;
@@ -1242,18 +1242,28 @@ async function updateTagihanKolektif(agenda_id: string, kecamatan_id: string) {
 
     const { data: registrants } = await supabaseAdmin.from('pendaftaran_peserta').select('id').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id);
     const count = registrants ? registrants.length : 0;
-    
-    if (count > 0) {
-      const total_tagihan = count * (agenda.camp_fee || 0);
-      
-      const { data: existing } = await supabaseAdmin.from('tagihan_kolektif').select('id, status').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id).maybeSingle();
-      if (existing) {
-        if (existing.status !== 'lunas' && existing.status !== 'menunggu_verifikasi') {
-          await supabaseAdmin.from('tagihan_kolektif').update({ jumlah_peserta_terverifikasi: count, total_tagihan }).eq('id', existing.id);
+    const fee = Number(agenda.camp_fee) || 0;
+
+    // select('*') agar tetap jalan walau kolom jumlah_peserta_dibayar belum ada (migrasi belum dijalankan)
+    const { data: existing } = await supabaseAdmin.from('tagihan_kolektif').select('*').eq('agenda_id', agenda_id).eq('kecamatan_id', kecamatan_id).maybeSingle();
+    if (existing) {
+      if (existing.status === 'menunggu_verifikasi') return; // jangan ubah tagihan yang sedang diperiksa admin
+      const dibayar = Number(existing.jumlah_peserta_dibayar) || 0;
+      const sisa = Math.max(0, count - dibayar);
+      if (existing.status === 'lunas') {
+        // Ada peserta baru setelah lunas → buka lagi tagihan untuk selisihnya saja
+        if (sisa > 0) {
+          await supabaseAdmin.from('tagihan_kolektif').update({
+            status: 'belum_bayar', jumlah_peserta_terverifikasi: count, total_tagihan: sisa * fee, bukti_bayar_url: null,
+            catatan: `Tagihan tambahan: ${sisa} peserta baru setelah pelunasan ${dibayar} peserta.`, updated_at: new Date().toISOString(),
+          }).eq('id', existing.id);
         }
-      } else {
-        await supabaseAdmin.from('tagihan_kolektif').insert({ agenda_id, kecamatan_id, jumlah_peserta_terverifikasi: count, total_tagihan, status: 'belum_bayar' });
+        return;
       }
+      // belum_bayar / ditolak: ikuti jumlah peserta terkini (dikurangi yang sudah dibayar sebelumnya)
+      await supabaseAdmin.from('tagihan_kolektif').update({ jumlah_peserta_terverifikasi: count, total_tagihan: sisa * fee }).eq('id', existing.id);
+    } else if (count > 0) {
+      await supabaseAdmin.from('tagihan_kolektif').insert({ agenda_id, kecamatan_id, jumlah_peserta_terverifikasi: count, total_tagihan: count * fee, status: 'belum_bayar' });
     }
   } catch (e) {
     console.error('Error updating tagihan:', e);
@@ -1276,7 +1286,7 @@ app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
       kecamatan_id,
       data_peserta: prep.data
     }).select('id').single();
-    
+
     if (error) throw error;
     updateTagihanKolektif(id, kecamatan_id);
     res.json({ success: true, id: data.id });
@@ -1355,7 +1365,7 @@ app.post('/api/agenda/:id/register-batch', async (req: Request, res: Response) =
     const { id } = req.params;
     const { peserta_list, kecamatan_id, bukti_bayar_url } = req.body;
     // peserta_list: Array<{ data_peserta: Record<string, any> }>
-    
+
     if (!peserta_list || !Array.isArray(peserta_list) || peserta_list.length === 0) {
       return res.status(400).json({ error: 'Daftar peserta tidak boleh kosong' });
     }
@@ -1429,25 +1439,25 @@ app.get('/api/pendaftaran/validate/:id', async (req: Request, res: Response) => 
 app.post('/api/pendaftaran/checkin/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // Ambil data sekarang
     const { data: current } = await supabaseAdmin
       .from('pendaftaran_peserta')
       .select('data_peserta')
       .eq('id', id)
       .maybeSingle();
-      
+
     if (!current) {
       return res.status(404).json({ error: 'Peserta tidak ditemukan' });
     }
-    
+
     const newData = { ...(current.data_peserta || {}), _is_hadir: true, _waktu_hadir: new Date().toISOString() };
-    
+
     await supabaseAdmin
       .from('pendaftaran_peserta')
       .update({ data_peserta: newData })
       .eq('id', id);
-      
+
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1457,25 +1467,25 @@ app.post('/api/pendaftaran/checkin/:id', async (req: Request, res: Response) => 
 app.post('/api/pendaftaran/lunas/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    
+
     // Ambil data sekarang
     const { data: current } = await supabaseAdmin
       .from('pendaftaran_peserta')
       .select('data_peserta')
       .eq('id', id)
       .maybeSingle();
-      
+
     if (!current) {
       return res.status(404).json({ error: 'Peserta tidak ditemukan' });
     }
-    
+
     const newData = { ...(current.data_peserta || {}), _is_lunas: true, _waktu_lunas: new Date().toISOString() };
-    
+
     await supabaseAdmin
       .from('pendaftaran_peserta')
       .update({ data_peserta: newData })
       .eq('id', id);
-      
+
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1577,7 +1587,7 @@ app.post('/api/users/reset_password', async (req: Request, res: Response) => {
 app.post('/api/users/save', async (req: Request, res: Response) => {
   try {
     const { email, password, role, kecamatan_id, saka_id, nama } = req.body;
-    
+
     if (!supabaseAdmin) {
       return res.status(500).json({ error: 'SUPABASE_SERVICE_ROLE_KEY belum diatur di Vercel.' });
     }
@@ -1693,15 +1703,15 @@ app.post('/api/tagihan_kolektif/sync', async (req: Request, res: Response) => {
   try {
     const { kecamatan_id } = req.body;
     if (!kecamatan_id) return res.status(400).json({error: 'kecamatan_id required'});
-    
+
     // Ambil semua agenda yang butuh tagihan
     // Kegiatan khusus mandiri disaring di updateTagihanKolektif (tipe ada di form_kegiatan_config)
     const { data: agendas } = await supabaseAdmin.from('agenda_kegiatan').select('id').eq('is_camp_fee_required', true);
-    
+
     for (const agenda of (agendas || [])) {
       await updateTagihanKolektif(agenda.id, kecamatan_id);
     }
-    
+
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1723,7 +1733,7 @@ app.get('/api/tagihan_kolektif', async (req: Request, res: Response) => {
     let query = supabaseAdmin.from('tagihan_kolektif').select('*');
     if (agenda_id) query = query.eq('agenda_id', agenda_id as string);
     if (kecamatan_id) query = query.eq('kecamatan_id', kecamatan_id as string);
-    
+
     const { data, error } = await query;
     if (error) throw error;
     res.json(data || []);
@@ -1735,7 +1745,7 @@ app.get('/api/tagihan_kolektif', async (req: Request, res: Response) => {
 app.post('/api/tagihan_kolektif/upsert', async (req: Request, res: Response) => {
   try {
     const { agenda_id, kecamatan_id, jumlah_peserta_terverifikasi, total_tagihan } = req.body;
-    
+
     // Check exist
     const { data: existing } = await supabaseAdmin.from('tagihan_kolektif')
       .select('id, status')
@@ -1810,34 +1820,44 @@ app.post('/api/tagihan_kolektif/status', async (req: Request, res: Response) => 
     if (!id || !['lunas', 'ditolak'].includes(status)) {
       return res.status(400).json({ error: 'id dan status (lunas/ditolak) wajib diisi' });
     }
-    const { data: current } = await supabaseAdmin.from('tagihan_kolektif').select('status').eq('id', id).maybeSingle();
+    const { data: current } = await supabaseAdmin.from('tagihan_kolektif').select('*').eq('id', id).maybeSingle();
     if (!current) return res.status(404).json({ error: 'Tagihan tidak ditemukan' });
     if (current.status !== 'menunggu_verifikasi') {
       return res.status(409).json({ error: 'Hanya tagihan berstatus menunggu verifikasi yang bisa diproses' });
     }
+    const now = new Date().toISOString();
+    const dibayarLama = Number(current.jumlah_peserta_dibayar) || 0;
+    const ditagih = Math.max(dibayarLama, Number(current.jumlah_peserta_terverifikasi) || 0); // jumlah peserta saat tagihan dihitung
+    const update: any = { status, catatan: catatan || null, updated_at: now };
+    if (status === 'lunas') {
+      const riwayat = Array.isArray(current.riwayat_bayar) ? current.riwayat_bayar : [];
+      update.jumlah_peserta_dibayar = ditagih;
+      update.total_dibayar = (Number(current.total_dibayar) || 0) + (Number(current.total_tagihan) || 0);
+      update.riwayat_bayar = [...riwayat, { jumlah_peserta: ditagih - dibayarLama, total: Number(current.total_tagihan) || 0, bukti_bayar_url: current.bukti_bayar_url || null, waktu: now }];
+    }
     const { data: tagihan, error: errTagihan } = await supabaseAdmin.from('tagihan_kolektif')
-      .update({ status, catatan: catatan || null, updated_at: new Date().toISOString() })
+      .update(update)
       .eq('id', id)
       .select().single();
-      
+
     if (errTagihan) throw errTagihan;
-    
-    // Jika Lunas, lunasi juga semua pendaftar kolektif dari kecamatan ini
+
+    // Jika Lunas: lunasi peserta kwarran ini (mandiri maupun kolektif) yang ikut ditagih, yaitu `ditagih`
+    // peserta pertama menurut waktu daftar. Peserta yang mendaftar setelah tagihan dihitung tetap belum lunas
+    // dan akan masuk tagihan tambahan.
     if (status === 'lunas') {
       const { data: pendaftar } = await supabaseAdmin.from('pendaftaran_peserta')
-        .select('id, data_peserta')
-        .eq('agenda_id', tagihan.agenda_id)
-        .eq('kecamatan_id', tagihan.kecamatan_id)
-        .eq('tipe', 'kolektif');
-        
-      if (pendaftar && pendaftar.length > 0) {
-        for (const p of pendaftar) {
-          const newData = { ...(p.data_peserta || {}), _is_lunas: true, _waktu_lunas: new Date().toISOString() };
-          await supabaseAdmin.from('pendaftaran_peserta').update({ data_peserta: newData }).eq('id', p.id);
-        }
+        .select('id, data_peserta, created_at')
+        .eq('agenda_id', current.agenda_id)
+        .eq('kecamatan_id', current.kecamatan_id)
+        .order('created_at', { ascending: true });
+      for (const p of (pendaftar || []).slice(0, ditagih)) {
+        if (p.data_peserta?._is_lunas) continue;
+        const newData = { ...(p.data_peserta || {}), _is_lunas: true, _waktu_lunas: now };
+        await supabaseAdmin.from('pendaftaran_peserta').update({ data_peserta: newData }).eq('id', p.id);
       }
     }
-    
+
     res.json({ success: true, data: tagihan });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

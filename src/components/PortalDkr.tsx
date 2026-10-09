@@ -784,6 +784,10 @@ export default function PortalDkr() {
   const suratUpdateCount = suratList.filter(sr => !sr.dilihat_dkr).length;
   const totalNotifs = verifiedLaporanCount + verifiedBeritaCount + suratUpdateCount;
 
+  // Peserta yang sudah dibayar pada pelunasan sebelumnya & sisanya (tagihan tambahan)
+  const sudahDibayar = (t: any) => Math.min(tagihanPeserta.length, Number(t?.jumlah_peserta_dibayar) || 0);
+  const belumDibayar = (t: any) => Math.max(0, tagihanPeserta.length - sudahDibayar(t));
+
   const getPesertaName = (data: any, schema?: any[]): string => {
     if (!data) return 'Tanpa Nama';
     // Field inti form pendaftaran: nama peserta selalu di 'nama_lengkap' (bukan nama kwarran/pangkalan/orang tua)
@@ -1669,10 +1673,16 @@ export default function PortalDkr() {
                     )}
                     <div className="bg-gray-50 p-4 rounded-xl font-mono text-xs space-y-2 border">
                       <div className="flex justify-between"><span>Jumlah Peserta:</span> <span className="font-bold">{tagihanPeserta.length} orang</span></div>
+                      {sudahDibayar(selectedTagihan) > 0 && (
+                        <>
+                          <div className="flex justify-between text-green-700"><span>Sudah lunas sebelumnya:</span> <span className="font-bold">{sudahDibayar(selectedTagihan)} orang</span></div>
+                          <div className="flex justify-between"><span>Belum dibayar:</span> <span className="font-bold">{belumDibayar(selectedTagihan)} orang</span></div>
+                        </>
+                      )}
                       <div className="flex justify-between"><span>Camp Fee per orang:</span> <span className="font-bold">Rp {(selectedTagihan.camp_fee || 0).toLocaleString('id-ID')}</span></div>
                       <div className="border-t pt-2 flex justify-between text-sm">
-                        <span className="font-extrabold text-brand-brown-dark">Total Tagihan:</span>
-                        <span className="font-extrabold text-brand-orange">Rp {(tagihanPeserta.length * (selectedTagihan.camp_fee || 0)).toLocaleString('id-ID')}</span>
+                        <span className="font-extrabold text-brand-brown-dark">{sudahDibayar(selectedTagihan) > 0 ? 'Tagihan Tambahan:' : 'Total Tagihan:'}</span>
+                        <span className="font-extrabold text-brand-orange">Rp {(belumDibayar(selectedTagihan) * (selectedTagihan.camp_fee || 0)).toLocaleString('id-ID')}</span>
                       </div>
                     </div>
 
@@ -1709,11 +1719,15 @@ export default function PortalDkr() {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                  id: selectedTagihan.id,
+                                  ...(selectedTagihan.id ? { id: selectedTagihan.id } : { agenda_id: selectedTagihan.agenda_id }),
                                   bukti_bayar_url: tagihanReceipt,
-                                  total_tagihan: tagihanPeserta.length * (selectedTagihan.camp_fee || 0)
+                                  total_tagihan: belumDibayar(selectedTagihan) * (selectedTagihan.camp_fee || 0)
                                 })
                               });
+                              if (!res.ok) {
+                                const err = await res.json().catch(() => null);
+                                alert(err?.error || 'Gagal mengirim bukti pembayaran.');
+                              }
                               if (res.ok) {
                                 alert('Berhasil disubmit! Menunggu verifikasi Cabang.');
                                 setSelectedTagihan(null);
@@ -1750,11 +1764,10 @@ export default function PortalDkr() {
               <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
                 <div className="space-y-4">
                   {activeAgendas.length > 0 ? activeAgendas.map((agenda: any) => {
-                    const t = tagihanCabangList.find((tag) => tag.agenda_id === agenda.id) || {
-                      id: null,
+                    const t = {
+                      ...(tagihanCabangList.find((tag) => tag.agenda_id === agenda.id) || { id: null, status: 'belum_bayar' }),
                       agenda_id: agenda.id,
                       agenda_nama: agenda.nama_kegiatan,
-                      status: 'belum_bayar',
                       camp_fee: agenda.camp_fee || 0
                     };
   return (
