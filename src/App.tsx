@@ -14,6 +14,7 @@ import PortalAdmin from './components/PortalAdmin';
 import PortalDkr from './components/PortalDkr';
 import PortalSaka from './components/PortalSaka';
 import ValidasiPendaftaran from './components/ValidasiPendaftaran';
+import ValidasiLaporan from './components/ValidasiLaporan';
 
 // Scroll to top or to hash element on route change
 function ScrollToTop() {
@@ -133,6 +134,11 @@ export default function App() {
         <Route 
           path="/validasi-pendaftaran/:id" 
           element={<ValidasiPendaftaran />} 
+        />
+
+        <Route 
+          path="/validasi-laporan/:id" 
+          element={<ValidasiLaporan />} 
         />
 
       </Routes>

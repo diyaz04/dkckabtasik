@@ -61,6 +61,18 @@ export default function ValidasiPendaftaran() {
               
               <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl text-left space-y-2 text-sm mt-6">
                 <div>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nama</span>
+                  <span className="font-extrabold text-gray-900">{data.data_peserta?.nama_lengkap || '-'}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Asal Kwartir Ranting</span>
+                  <span className="font-bold text-gray-800">{data.data_peserta?.kwarran_asal || '-'}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Gugus Depan</span>
+                  <span className="font-bold text-gray-800">{data.data_peserta?.pangkalan || '-'}</span>
+                </div>
+                <div>
                   <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">ID Pendaftaran</span>
                   <span className="font-mono font-bold text-[#593922]">{data.id.split('-')[0].toUpperCase()}</span>
                 </div>

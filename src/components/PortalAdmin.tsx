@@ -46,6 +46,10 @@ export default function PortalAdmin() {
   // DB States
   const [kecamatanList, setKecamatanList] = useState<Kecamatan[]>([]);
   const [sakaList, setSakaList] = useState<Saka[]>([]);
+  const [showAddSaka, setShowAddSaka] = useState(false);
+  const [newSakaNama, setNewSakaNama] = useState('');
+  const [newSakaDeskripsi, setNewSakaDeskripsi] = useState('');
+  const [addingSaka, setAddingSaka] = useState(false);
   const [dataPotensial, setDataPotensial] = useState<DataPotensial[]>([]);
   const [beritaList, setBeritaList] = useState<Berita[]>([]);
   const [reviewBerita, setReviewBerita] = useState<Berita | null>(null);
@@ -1074,6 +1078,30 @@ export default function PortalAdmin() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  // Tambah SAKA baru → langsung masuk daftar & dropdown pembuatan akun SAKA
+  const handleAddSaka = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddingSaka(true);
+    try {
+      const res = await fetch('/api/saka/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nama_saka: newSakaNama, deskripsi: newSakaDeskripsi })
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d?.error || 'Gagal menambah SAKA');
+      setSakaList(prev => [...prev, d.data]);
+      setNewSakaNama('');
+      setNewSakaDeskripsi('');
+      setShowAddSaka(false);
+      alert(`SAKA "${d.data.nama_saka}" ditambahkan. Sekarang bisa dipilih saat membuat akun SAKA.`);
+    } catch (err: any) {
+      alert(err?.message || 'Gagal menambah SAKA. Coba lagi.');
+    } finally {
+      setAddingSaka(false);
     }
   };
 
@@ -2154,7 +2182,39 @@ export default function PortalAdmin() {
             <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
               <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                 <span className="font-extrabold text-xs text-brand-brown-dark font-mono uppercase">Tabel Rekapitulasi SAKA</span>
+                <button
+                  onClick={() => setShowAddSaka(v => !v)}
+                  className="bg-brand-brown-dark hover:bg-brand-brown-dark/95 text-white font-extrabold text-[10px] px-4 py-2 rounded-xl uppercase flex items-center gap-1.5 cursor-pointer shadow"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Tambah SAKA
+                </button>
               </div>
+              {showAddSaka && (
+                <form onSubmit={handleAddSaka} className="p-6 border-b border-gray-100 bg-white grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Nama SAKA</label>
+                    <input
+                      type="text" required minLength={3} value={newSakaNama} onChange={(e) => setNewSakaNama(e.target.value)}
+                      placeholder="Contoh: Saka Bhayangkara"
+                      className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Deskripsi singkat (opsional)</label>
+                    <input
+                      type="text" value={newSakaDeskripsi} onChange={(e) => setNewSakaDeskripsi(e.target.value)}
+                      placeholder="Satuan Karya ..."
+                      className="w-full bg-gray-50 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#0E9F6E] focus:ring-2 focus:ring-[#0E9F6E]/10 focus:bg-white"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowAddSaka(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2.5 rounded-xl cursor-pointer">Batal</button>
+                    <button type="submit" disabled={addingSaka} className="bg-brand-green text-white font-extrabold px-5 py-2.5 rounded-xl uppercase cursor-pointer disabled:opacity-50">
+                      {addingSaka ? 'Menyimpan...' : 'Simpan SAKA'}
+                    </button>
+                  </div>
+                </form>
+              )}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs font-mono">
                   <thead className="bg-brand-brown-dark text-white uppercase text-[10px] tracking-wider">

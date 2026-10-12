@@ -522,6 +522,26 @@ app.get('/api/saka', async (_req: Request, res: Response) => {
   }
 });
 
+// Admin menambah SAKA baru (id & slug dibuat dari nama, tanpa awalan "Saka"). Langsung masuk dropdown pembuatan akun SAKA.
+app.post('/api/saka/save', async (req: Request, res: Response) => {
+  try {
+    const nama = String(req.body?.nama_saka || '').replace(/\s+/g, ' ').trim();
+    const deskripsi = String(req.body?.deskripsi || '').trim();
+    if (nama.length < 3) return res.status(400).json({ error: 'Nama SAKA minimal 3 karakter' });
+    const slug = nama.toLowerCase().replace(/^saka\s+/, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').replace(/-+/g, '-');
+    if (!slug) return res.status(400).json({ error: 'Nama SAKA tidak valid' });
+    const { data: dup } = await supabaseAdmin.from('saka').select('id').or(`id.eq.${slug},slug.eq.${slug},nama_saka.ilike.${nama.replace(/[,()]/g, ' ')}`).limit(1);
+    if (dup && dup.length > 0) return res.status(409).json({ error: 'SAKA dengan nama tersebut sudah ada' });
+    const { data, error } = await supabaseAdmin.from('saka')
+      .insert({ id: slug, slug, nama_saka: nama, deskripsi: deskripsi || null, is_aktif: true })
+      .select().single();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/saka/toggle-active', async (req: Request, res: Response) => {
   try {
     const { id } = req.body;
@@ -1430,7 +1450,29 @@ app.get('/api/pendaftaran/validate/:id', async (req: Request, res: Response) => 
       .eq('id', pendaftaran.agenda_id)
       .maybeSingle();
 
-    res.json({ pendaftaran, agenda });
+    // Pemindai check-in (admin/DKR yang login) butuh data lengkap; publik (halaman validasi QR)
+    // hanya menerima identitas ringkas agar data pribadi tidak bocor ke siapa pun yang tahu ID.
+    let loggedIn = false;
+    if (req.headers.authorization) {
+      try { const a = await loadAuth(req); loggedIn = a.role === 'admin' || a.role === 'user'; } catch { /* token tidak valid → publik */ }
+    }
+    if (loggedIn) return res.json({ pendaftaran, agenda });
+
+    const dp = pendaftaran.data_peserta || {};
+    const gudepKey = Object.keys(dp).find(k => /pangkalan|gudep|gugus/i.test(k) && typeof dp[k] === 'string' && dp[k]);
+    res.json({
+      pendaftaran: {
+        id: pendaftaran.id,
+        tipe: pendaftaran.tipe,
+        created_at: pendaftaran.created_at,
+        data_peserta: {
+          nama_lengkap: dp.nama_lengkap || dp.nama || null,
+          kwarran_asal: dp.kwarran_asal || null,
+          pangkalan: dp.pangkalan || (gudepKey ? dp[gudepKey] : null),
+        },
+      },
+      agenda,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -1633,6 +1675,35 @@ app.get('/api/laporan_kegiatan', async (_req: Request, res: Response) => {
   try {
     const { data } = await supabaseAdmin.from('laporan_kegiatan').select('*');
     res.json(data || []);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Validasi publik dokumen laporan (dibuka lewat QR di tanda tangan digital laporan).
+// Hanya mengembalikan data ringkas; isi laporan (form_data, lampiran) tidak dibuka.
+app.get('/api/laporan/validate/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(404).json({ error: 'Not found' });
+    const { data, error } = await supabaseAdmin
+      .from('laporan_kegiatan')
+      .select('id, jenis_dokumen, nama_kegiatan, kecamatan_nama, tanggal_pelaksanaan, tempat_pelaksanaan, status, created_at, form_data')
+      .eq('id', id)
+      .maybeSingle();
+    if (error || !data || data.status === 'draft') return res.status(404).json({ error: 'Not found' });
+    const fd = typeof data.form_data === 'string' ? (() => { try { return JSON.parse(data.form_data); } catch { return null; } })() : data.form_data;
+    res.json({
+      id: data.id,
+      jenis_dokumen: data.jenis_dokumen,
+      nama_kegiatan: data.nama_kegiatan,
+      kecamatan_nama: data.kecamatan_nama,
+      tanggal_pelaksanaan: data.tanggal_pelaksanaan,
+      tempat_pelaksanaan: data.tempat_pelaksanaan,
+      status: data.status,
+      created_at: data.created_at,
+      ketua_panitia: fd?.ttdPanitia?.nama || null,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

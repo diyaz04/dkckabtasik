@@ -1,5 +1,7 @@
 import React from 'react';
+import QRCode from 'react-qr-code';
 import { LaporanKegiatan } from '../types';
+import { validasiLaporanUrl } from '../utils/publicUrl';
 
 interface Props {
   laporan: LaporanKegiatan;
@@ -196,7 +198,13 @@ export default function LaporanPdfTemplate({ laporan, profileDkr }: Props) {
             <p>Gerakan Pramuka</p>
             <p>Kwartir Ranting {laporan.kecamatan_nama}</p>
             <p>Ketua,</p>
-            <div className="h-24"></div>
+            {/* Tanda tangan digital: QR menuju halaman validasi laporan ini */}
+            <div className="h-24 flex flex-col items-center justify-center">
+              <div style={{ background: '#ffffff', padding: 2 }}>
+                <QRCode value={validasiLaporanUrl(laporan.id)} size={72} level="M" />
+              </div>
+              <p style={{ fontSize: 7, lineHeight: 1.1, marginTop: 2 }}>Ditandatangani digital · pindai untuk validasi</p>
+            </div>
             <p className="font-bold underline">{profileDkr?.nama_ketua || '_______________________'}</p>
             <p>NTA. {profileDkr?.nta_ketua || '________________'}</p>
           </div>
