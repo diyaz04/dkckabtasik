@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PangkalanInput, { isPangkalanField, savePangkalanFromRows } from './PangkalanInput';
+import FileUploadField from './FileUploadField';
 import { showAlert as alert, showConfirm } from '../utils/dialog';
 import SuratDkrPanel from './SuratDkrPanel';
 import { useSuratDkr } from '../utils/suratDkr';
@@ -2523,7 +2524,10 @@ export default function PortalDkr() {
                     <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
                       {f.label} {f.required && <span className="text-brand-orange">*</span>}
                     </label>
-                    {isPangkalanField(f) ? (
+                    {f.type === 'file' ? (
+                      <FileUploadField value={addPesertaFormValues[f.id] || ''}
+                        onChange={(url) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: url})} />
+                    ) : isPangkalanField(f) ? (
                       <PangkalanInput required={f.required} kecamatanId={kecamatan?.id}
                         value={addPesertaFormValues[f.id] || ''}
                         onChange={(v) => setAddPesertaFormValues({...addPesertaFormValues, [f.id]: v})} />

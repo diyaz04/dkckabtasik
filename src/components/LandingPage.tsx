@@ -4,6 +4,7 @@ import PamfletCard from './PamfletCard';
 import { showAlert as alert } from '../utils/dialog';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import PangkalanInput, { isPangkalanField, savePangkalanFromRows } from './PangkalanInput';
+import FileUploadField from './FileUploadField';
 import { normalizeDate } from '../utils/coreFields';
 import { Link } from 'react-router-dom';
 import { 
@@ -359,6 +360,8 @@ export default function LandingPage() {
   const [kolektifMode, setKolektifMode] = useState<'manual' | 'excel'>('manual');
   const [kolektifPeserta, setKolektifPeserta] = useState<Record<string, any>[]>([{}]);
   const [kolektifKecamatanId, setKolektifKecamatanId] = useState('');
+  // Berkas lampiran (field bertipe 'file') untuk pendaftaran kolektif: diunggah sekali, berlaku untuk semua peserta dalam kiriman
+  const [kolektifFiles, setKolektifFiles] = useState<Record<string, string>>({});
   const [excelImportData, setExcelImportData] = useState<Record<string, any>[]>([]);
   const [excelImportErrors, setExcelImportErrors] = useState<string[]>([]);
 
@@ -449,6 +452,7 @@ export default function LandingPage() {
     setRegistrationFormData({});
     setKolektifPeserta([{}]);
     setKolektifKecamatanId('');
+    setKolektifFiles({});
     setExcelImportData([]);
     setExcelImportErrors([]);
     setBuktiPaymentUrl('');
@@ -483,7 +487,7 @@ export default function LandingPage() {
   // ─── Download Excel Template for Kolektif ───
   const downloadExcelTemplate = () => {
     if (!agendaConfig?.form_schema) return;
-    const headers = agendaConfig.form_schema.filter(f => !f.auto).map(f => f.label);
+    const headers = agendaConfig.form_schema.filter(f => !f.auto && f.type !== 'file').map(f => f.label);
     const ws = XLSX.utils.aoa_to_sheet([headers, []]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Template');
@@ -519,7 +523,7 @@ export default function LandingPage() {
         let rowValid = true;
 
         schemaFields.forEach(field => {
-          if (field.auto) return; // diisi otomatis dari Asal Kwartir Ranting
+          if (field.auto || field.type === 'file') return; // auto: dari Asal Kwartir Ranting; file: diunggah terpisah
           const colIdx = headers.indexOf(field.label);
           let val = colIdx >= 0 ? String(row[colIdx] ?? '').trim() : '';
           if (field.type === 'date' && val) {
@@ -577,6 +581,12 @@ export default function LandingPage() {
 
     // Bukti bayar untuk kolektif dikelola di Portal DKR
 
+    const missingFile = (agendaConfig?.form_schema || []).find(f => f.type === 'file' && !kolektifFiles[f.id]);
+    if (missingFile) {
+      alert(`Berkas "${missingFile.label}" wajib diunggah (PDF/JPG/PNG, maks 2 MB).`);
+      return;
+    }
+
     setRegisterLoading(true);
     try {
       // Simpan otomatis pangkalan baru yang diketik user
@@ -585,7 +595,7 @@ export default function LandingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          peserta_list: pesertaToSend.map(p => ({ data_peserta: p })),
+          peserta_list: pesertaToSend.map(p => ({ data_peserta: { ...p, ...kolektifFiles } })),
           kecamatan_id: kolektifKecamatanId || null,
           bukti_bayar_url: buktiPaymentUrl || null
         })
@@ -621,6 +631,13 @@ export default function LandingPage() {
 
     if (!kolektifKecamatanId) {
       alert('Harap pilih Asal Kwartir Ranting terlebih dahulu.');
+      setRegisterLoading(false);
+      return;
+    }
+
+    const missingFile = (agendaConfig?.form_schema || []).find(f => f.type === 'file' && !registrationFormData[f.id]);
+    if (missingFile) {
+      alert(`Berkas "${missingFile.label}" wajib diunggah (PDF/JPG/PNG, maks 2 MB).`);
       setRegisterLoading(false);
       return;
     }
@@ -2094,6 +2111,18 @@ export default function LandingPage() {
                         </select>
                       </div>
 
+                      {/* Lampiran wajib (surat tugas / mandat dll) — sekali untuk seluruh peserta */}
+                      {agendaConfig.form_schema.filter(f => f.type === 'file').map(f => (
+                        <div key={f.id}>
+                          <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">
+                            {f.label} <span className="text-brand-red">*</span>
+                          </label>
+                          <FileUploadField required value={kolektifFiles[f.id] || ''}
+                            onChange={url => setKolektifFiles(prev => ({ ...prev, [f.id]: url }))} />
+                          <p className="text-[10px] text-gray-400 mt-1">Berkas ini berlaku untuk semua peserta yang didaftarkan sekaligus.</p>
+                        </div>
+                      ))}
+
                       {/* Mode: manual / excel */}
                       <div className="bg-gray-50 rounded-xl p-1 flex gap-1">
                         <button type="button" onClick={() => setKolektifMode('manual')}
@@ -2118,7 +2147,7 @@ export default function LandingPage() {
                                     className="text-gray-400 hover:text-red-500 text-[10px] font-bold cursor-pointer">✕ Hapus</button>
                                 )}
                               </div>
-                              {agendaConfig.form_schema.filter(f => !f.auto).map(f => (
+                              {agendaConfig.form_schema.filter(f => !f.auto && f.type !== 'file').map(f => (
                                 <div key={f.id}>
                                   <label className="block text-[10px] text-gray-500 font-bold uppercase mb-0.5">{f.label}{f.required && <span className="text-red-400"> *</span>}</label>
                                   {isPangkalanField(f) ? (
@@ -2222,7 +2251,10 @@ export default function LandingPage() {
                                 {f.label} {f.required && <span className="text-brand-red">*</span>}
                               </label>
 
-                              {isPangkalanField(f) ? (
+                              {f.type === 'file' ? (
+                                <FileUploadField required value={registrationFormData[f.id] || ''}
+                                  onChange={url => handleInputChange(f.id, url)} />
+                              ) : isPangkalanField(f) ? (
                                 <PangkalanInput required={f.required} kecamatanId={kolektifKecamatanId}
                                   value={registrationFormData[f.id] || ''} onChange={v => handleInputChange(f.id, v)} />
                               ) : f.type === 'select' ? (

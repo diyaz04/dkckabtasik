@@ -93,6 +93,33 @@ async function uploadToUploadcare(base64Data: string, filename: string, _fileTyp
   return uploadFile(base64Data, filename, _fileType);
 }
 
+// Lampiran wajib form pendaftaran kegiatan (surat tugas / surat mandat dll): hanya Cloudinary, maks 2 MB, PDF/gambar.
+const MAX_FORM_FILE_BYTES = 2 * 1024 * 1024;
+const FORM_FILE_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+async function uploadFormFile(dataUrl: string, originalName: string): Promise<{ url: string }> {
+  const m = typeof dataUrl === 'string' ? dataUrl.match(/^data:([A-Za-z0-9.+\/-]+);base64,([A-Za-z0-9+\/=\s]+)$/) : null;
+  if (!m) throw new Error('Format berkas tidak valid.');
+  const mime = m[1].toLowerCase();
+  if (!FORM_FILE_MIME.includes(mime)) throw new Error('Format berkas harus PDF, JPG, PNG, atau WEBP.');
+  const base64 = m[2].replace(/\s/g, '');
+  const bytes = Math.floor(base64.length * 3 / 4) - (base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0);
+  if (bytes > MAX_FORM_FILE_BYTES) throw new Error('Ukuran berkas maksimal 2 MB.');
+
+  const cld = await getCloudinary();
+  if (!cld) throw new Error('Cloudinary belum dikonfigurasi di Environment Variables (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)');
+  const safeName = String(originalName || 'berkas').replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 40) || 'berkas';
+  try {
+    const res = await cld.uploader.upload(`data:${mime};base64,${base64}`, {
+      folder: 'dkc_tasikmalaya/form_kegiatan',
+      public_id: `${Date.now()}-${safeName}`,
+      resource_type: 'auto',
+    });
+    return { url: res.secure_url };
+  } catch (e: any) {
+    throw new Error(`Cloudinary error: ${e.message}`);
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════
 // OTORISASI TERPUSAT
 // Semua request ke /api lewat sini SEBELUM route. Aturan:
@@ -168,6 +195,7 @@ const PUBLIC_WRITES: Array<[string, RegExp]> = [
   ['POST', /^\/auth\/change-password$/],           // memverifikasi token sendiri
   ['POST', /^\/upload$/],                           // dipakai form pendaftaran publik (bukti bayar)
   ['POST', /^\/upload\/uploadcare$/],
+  ['POST', /^\/upload\/form-file$/],                // lampiran wajib form pendaftaran (maks 2 MB)
   ['POST', /^\/pangkalan\/register$/],              // form pendaftaran publik
   ['POST', /^\/berita\/[^/]+\/like$/],
   ['POST', /^\/agenda\/[^/]+\/register$/],
@@ -394,6 +422,17 @@ app.post('/api/upload', async (req: Request, res: Response) => {
     res.json({ url: result.url });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/upload/form-file', async (req: Request, res: Response) => {
+  try {
+    const { file, name } = req.body;
+    if (!file) return res.status(400).json({ error: 'Tidak ada file dikirim' });
+    const result = await uploadFormFile(file, name);
+    res.json({ url: result.url });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 });
 
@@ -1233,7 +1272,8 @@ app.post('/api/agenda/:id/config', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { tipe_pendaftaran, is_qr_validasi = true, is_qr_checkin = false } = req.body;
-    const form_schema = ensureCoreFormFields(req.body.form_schema); // field inti selalu dipaksa ada
+    const form_schema = ensureCoreFormFields(req.body.form_schema) // field inti selalu dipaksa ada
+      .map((f: any) => f.type === 'file' ? { ...f, required: true } : f); // field upload berkas selalu wajib diisi
     const { data: existing } = await supabaseAdmin.from('form_kegiatan_config').select('id').eq('agenda_id', id).maybeSingle();
     if (existing) {
       await supabaseAdmin.from('form_kegiatan_config').update({ form_schema, tipe_pendaftaran, is_qr_validasi, is_qr_checkin }).eq('agenda_id', id);
@@ -1290,12 +1330,27 @@ async function updateTagihanKolektif(agenda_id: string, kecamatan_id: string) {
   }
 }
 
+/** Field bertipe 'file' wajib terisi URL Cloudinary (hasil /api/upload/form-file) saat mendaftar. */
+async function checkRequiredFiles(agendaId: string, data: any): Promise<string | null> {
+  const { data: cfg } = await supabaseAdmin.from('form_kegiatan_config').select('form_schema').eq('agenda_id', agendaId).maybeSingle();
+  const fileFields = (Array.isArray(cfg?.form_schema) ? cfg!.form_schema : []).filter((f: any) => f?.type === 'file');
+  for (const f of fileFields) {
+    const v = data?.[f.id];
+    if (typeof v !== 'string' || !/^https:\/\/res\.cloudinary\.com\//.test(v)) {
+      return `Berkas "${f.label}" wajib diunggah (PDF/JPG/PNG, maks 2 MB).`;
+    }
+  }
+  return null;
+}
+
 app.post('/api/agenda/:id/register', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { tipe, kecamatan_id, data_peserta } = req.body;
     const prep = await prepareRegistrant(data_peserta, kecamatan_id);
     if (prep.error) return res.status(400).json({ error: prep.error });
+    const fileErr = await checkRequiredFiles(id, prep.data);
+    if (fileErr) return res.status(400).json({ error: fileErr });
     const dups = await findDuplicates(id, kecamatan_id, [prep.data]);
     if (dups.length > 0) {
       return res.status(409).json({ code: 'DUPLICATE', error: duplicateMessage(dups, true), duplicates: dups });
@@ -1400,6 +1455,11 @@ app.post('/api/agenda/:id/register-batch', async (req: Request, res: Response) =
     }
     if (prepErrors.length > 0) {
       return res.status(400).json({ error: prepErrors.slice(0, 5).join(' | ') });
+    }
+
+    for (let i = 0; i < prepared.length; i++) {
+      const fileErr = await checkRequiredFiles(id, prepared[i]);
+      if (fileErr) return res.status(400).json({ error: `Peserta #${i + 1}: ${fileErr}` });
     }
 
     // Deteksi pendaftar ganda (terhadap data existing & antar peserta dalam kiriman ini)
@@ -1598,7 +1658,15 @@ app.post('/api/site_content/save', async (req: Request, res: Response) => {
 app.get('/api/users', async (_req: Request, res: Response) => {
   try {
     const { data } = await supabaseAdmin.from('profiles').select('user_id, role, kecamatan_id, saka_id, nama');
-    res.json(data || []);
+    // Email ada di Supabase Auth (bukan di tabel profiles) → gabungkan berdasarkan user_id
+    const emailById = new Map<string, string>();
+    for (let page = 1; page <= 20; page++) {
+      const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) { console.error('listUsers gagal:', error.message); break; }
+      (list?.users || []).forEach((u: any) => emailById.set(u.id, u.email || ''));
+      if (!list?.users || list.users.length < 1000) break;
+    }
+    res.json((data || []).map((p: any) => ({ ...p, email: emailById.get(p.user_id) || '' })));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -1606,12 +1674,19 @@ app.get('/api/users', async (_req: Request, res: Response) => {
 
 app.post('/api/users/reset_password', async (req: Request, res: Response) => {
   try {
-    const { user_id } = req.body;
+    const { user_id, new_password } = req.body;
     if (!user_id) return res.status(400).json({ error: 'User ID is required' });
 
-    // Kata sandi sementara 10 karakter dari CSPRNG (tanpa karakter yang mudah tertukar: 0/O, 1/l/I)
-    const ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const newPassword = Array.from({ length: 10 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
+    // Admin boleh mengetik sendiri kata sandi barunya (min. 8 karakter); kalau kosong → dibuatkan acak.
+    // Acak: 10 karakter dari CSPRNG (tanpa karakter yang mudah tertukar: 0/O, 1/l/I)
+    let newPassword: string;
+    if (typeof new_password === 'string' && new_password.length > 0) {
+      if (new_password.length < 8) return res.status(400).json({ error: 'Kata sandi minimal 8 karakter.' });
+      newPassword = new_password;
+    } else {
+      const ALPHABET = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      newPassword = Array.from({ length: 10 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
+    }
 
     const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
       password: newPassword,

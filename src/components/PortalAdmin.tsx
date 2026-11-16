@@ -10,7 +10,7 @@ import PengumumanEditor from './PengumumanEditor';
 import VisibilityToggleCard from './VisibilityToggleCard';
 import { cacheKlasemenVisible } from '../utils/useKlasemenVisible';
 import { useSuratDkr } from '../utils/suratDkr';
-import { Mail as MailIcon, Key, Megaphone } from 'lucide-react';
+import { Mail as MailIcon, Key, Megaphone, Copy as CopyIcon } from 'lucide-react';
 import PersonaliaExtraFields, { PersonaliaExtra, emptyPersonaliaExtra, extraFromPersonalia, serializeExtra } from './PersonaliaExtraFields';
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -979,7 +979,7 @@ export default function PortalAdmin() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          form_schema: ensureCoreFields(formFields),
+          form_schema: ensureCoreFields(formFields).map((f: any) => f.type === 'file' ? { ...f, required: true } : f),
           tipe_pendaftaran: pendaftaranTipe,
           is_qr_validasi: isQrValidasi,
           is_qr_checkin: isQrCheckin
@@ -987,6 +987,9 @@ export default function PortalAdmin() {
       });
       if (res.ok) {
         alert('Konfigurasi formulir pendaftaran dinamis berhasil disimpan!');
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(err?.error || 'Gagal menyimpan konfigurasi formulir.');
       }
     } catch (e) {
       console.error(e);
@@ -1150,24 +1153,48 @@ export default function PortalAdmin() {
 
   // Create User DKR / SAKA
 
-  const handleResetPassword = async (userId: string, userName: string) => {
-    if (!confirm(`Anda yakin ingin mereset kata sandi untuk akun ${userName}?`)) return;
-    
+  // ── Reset password akun (DKR / SAKA) lewat modal: tampil email, kata sandi acak atau diketik admin ──
+  const [resetTarget, setResetTarget] = useState<{ user_id: string; nama: string; email: string } | null>(null);
+  const [resetCustomPw, setResetCustomPw] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetResult, setResetResult] = useState<string | null>(null);
+
+  const openResetModal = (usr: { user_id: string; nama: string; email?: string }) => {
+    setResetTarget({ user_id: usr.user_id, nama: usr.nama, email: usr.email || '' });
+    setResetCustomPw('');
+    setResetResult(null);
+  };
+  const closeResetModal = () => { setResetTarget(null); setResetCustomPw(''); setResetResult(null); };
+
+  const submitResetPassword = async () => {
+    if (!resetTarget) return;
+    if (resetCustomPw && resetCustomPw.length < 8) {
+      alert('Kata sandi baru minimal 8 karakter (atau kosongkan untuk dibuatkan otomatis).');
+      return;
+    }
+    setResetBusy(true);
     try {
       const res = await fetch('/api/users/reset_password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ user_id: resetTarget.user_id, new_password: resetCustomPw || undefined }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
-        alert(`Kata sandi untuk ${userName} berhasil direset!\n\nKata Sandi Baru: ${data.newPassword}\n\nHarap salin kata sandi ini dan berikan kepada pengguna yang bersangkutan.`);
+        setResetResult(data.newPassword);
       } else {
-        alert(`Gagal mereset kata sandi: ${data.error}`);
+        alert(`Gagal mereset kata sandi: ${data.error || 'terjadi kesalahan'}`);
       }
     } catch (error) {
       alert('Terjadi kesalahan saat mereset kata sandi.');
+    } finally {
+      setResetBusy(false);
     }
+  };
+
+  const copyText = async (text: string) => {
+    try { await navigator.clipboard.writeText(text); alert('Tersalin ke clipboard.'); }
+    catch { alert('Gagal menyalin, silakan salin manual.'); }
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -2580,7 +2607,13 @@ export default function PortalAdmin() {
                               {formFields.map(field => (
                                 <div key={field.id} className="grid grid-cols-3 border-b border-gray-100 py-1.5">
                                   <span className="text-gray-500 font-bold col-span-1">{field.label}</span>
-                                  <span className="text-gray-800 col-span-2">{viewRegistrant.data_peserta[field.id] || '-'}</span>
+                                  <span className="text-gray-800 col-span-2 break-words">
+                                    {field.type === 'file' ? (
+                                      viewRegistrant.data_peserta[field.id]
+                                        ? <a href={viewRegistrant.data_peserta[field.id]} target="_blank" rel="noreferrer" className="text-brand-teal font-bold underline inline-flex items-center gap-1"><FileText className="w-3 h-3" /> Lihat berkas</a>
+                                        : '-'
+                                    ) : (viewRegistrant.data_peserta[field.id] || '-')}
+                                  </span>
                                 </div>
                               ))}
                               {viewRegistrant.kecamatan_id && (
@@ -3076,6 +3109,7 @@ export default function PortalAdmin() {
                                 onChange={(e) => {
                                   const list = [...formFields];
                                   list[idx].type = e.target.value;
+                                  if (e.target.value === 'file') list[idx].required = true; // upload berkas selalu wajib
                                   setFormFields(list);
                                 }}
                                 className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:bg-white focus:border-brand-orange focus:outline-none transition-colors min-w-[140px] disabled:opacity-70 disabled:cursor-not-allowed"
@@ -3086,13 +3120,14 @@ export default function PortalAdmin() {
                                 <option value="textarea">Teks Panjang</option>
                                 <option value="pangkalan">Pilih Pangkalan (dari database)</option>
                                 <option value="date">Tanggal</option>
+                                <option value="file">Upload File (Cloudinary, maks 2 MB)</option>
                               </select>
                             </div>
 
                             <div className="flex items-center h-full pb-2 lg:pb-0">
                               <label className="flex items-center gap-2 font-bold text-xs text-gray-600 cursor-pointer hover:text-brand-orange transition-colors">
                                 <input 
-                                  type="checkbox" checked={field.required || !!field.locked} disabled={!!field.locked}
+                                  type="checkbox" checked={field.required || !!field.locked || field.type === 'file'} disabled={!!field.locked || field.type === 'file'}
                                   onChange={(e) => {
                                     const list = [...formFields];
                                     list[idx].required = e.target.checked;
@@ -3118,6 +3153,19 @@ export default function PortalAdmin() {
                             )}
                           </div>
                           </div> {/* end inner wrapper */}
+
+                          {/* Info field upload file */}
+                          {field.type === 'file' && (
+                            <div className="w-full pt-3 border-t border-dashed border-gray-200">
+                              <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl px-3 py-2.5 text-[11px] font-sans leading-relaxed">
+                                <Upload className="w-4 h-4 shrink-0 mt-0.5" />
+                                <span>
+                                  Pendaftar <b>wajib mengunggah berkas</b> untuk field ini (cth: surat tugas / surat mandat). Berkas disimpan ke Cloudinary,
+                                  format PDF/JPG/PNG/WEBP, <b>maksimal 2 MB</b>. Pada pendaftaran kolektif, berkas diunggah sekali untuk seluruh peserta dalam satu pengiriman.
+                                </span>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Dropdown Options details */}
                           {field.type === 'select' && (
@@ -3754,18 +3802,21 @@ export default function PortalAdmin() {
                   {userList.filter(u => u.role === 'user').map((usr) => {
                     const keca = kecamatanList.find(k => k.id === usr.kecamatan_id);
                     return (
-                      <div key={usr.email} className="p-4 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono">
+                      <div key={usr.user_id} className="p-4 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono">
                         <div>
                           <span className="bg-brand-brown-dark text-white font-bold px-2 py-0.5 rounded text-[8px] uppercase font-mono">
                             DKR KECAMATAN
                           </span>
                           <h4 className="font-extrabold text-sm text-brand-brown-dark tracking-tight leading-none mt-2">{usr.nama}</h4>
-                          <p className="text-[10px] text-gray-400 mt-1">{usr.email}</p>
+                          <p className="text-[11px] text-gray-600 mt-1.5 flex items-center gap-1.5 break-all">
+                            <MailIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            {usr.email || <span className="italic text-gray-400">email tidak ditemukan</span>}
+                          </p>
                         </div>
 
                         
                           <button
-                            onClick={() => handleResetPassword(usr.user_id, usr.nama)}
+                            onClick={() => openResetModal(usr)}
                             className="bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange border border-brand-orange/20 px-3 py-1 rounded-xl text-[10px] font-extrabold flex items-center gap-1 transition-colors"
                           >
                             <Key className="w-3.5 h-3.5" /> Reset Password
@@ -3800,6 +3851,67 @@ export default function PortalAdmin() {
                 </div>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* MODAL RESET PASSWORD AKUN */}
+        {resetTarget && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-5 relative">
+              <button type="button" onClick={closeResetModal} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-1.5 rounded-full hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+              <h3 className="font-extrabold text-base text-brand-brown-dark tracking-tight border-b-2 border-brand-orange pb-2 flex items-center gap-2">
+                <Key className="w-4 h-4 text-brand-orange" /> Reset Kata Sandi Akun
+              </h3>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs font-mono space-y-1">
+                <p className="font-extrabold text-sm text-brand-brown-dark font-sans">{resetTarget.nama}</p>
+                <p className="text-gray-600 flex items-center gap-1.5 break-all">
+                  <MailIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  {resetTarget.email || <span className="italic text-gray-400">email tidak ditemukan</span>}
+                </p>
+              </div>
+
+              {resetResult === null ? (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1 font-mono">Kata Sandi Baru (opsional)</label>
+                    <input
+                      type="text" value={resetCustomPw} onChange={(e) => setResetCustomPw(e.target.value)}
+                      placeholder="Kosongkan = dibuatkan acak otomatis" autoComplete="off"
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-mono focus:outline-none focus:border-brand-orange focus:bg-white"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1 font-mono">Ketik sendiri (min. 8 karakter) atau biarkan kosong agar sistem membuat 10 karakter acak.</p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button type="button" onClick={closeResetModal} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700">Batal</button>
+                    <button
+                      type="button" disabled={resetBusy} onClick={submitResetPassword}
+                      className="bg-brand-orange hover:bg-orange-600 disabled:opacity-60 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-pointer shadow"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${resetBusy ? 'animate-spin' : ''}`} /> {resetBusy ? 'Mereset...' : 'Reset Sekarang'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2">
+                    <p className="text-[11px] font-bold text-emerald-700">✅ Kata sandi berhasil direset. Berikan kepada pemilik akun:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm font-bold tracking-wide break-all select-all">{resetResult}</code>
+                      <button type="button" onClick={() => copyText(resetResult)} className="bg-emerald-600 hover:bg-emerald-700 text-white p-2.5 rounded-lg cursor-pointer" title="Salin">
+                        <CopyIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-emerald-700/80">Kata sandi ini hanya ditampilkan sekarang. Setelah ditutup tidak bisa dilihat lagi.</p>
+                  </div>
+                  <div className="flex justify-end">
+                    <button type="button" onClick={closeResetModal} className="bg-brand-green text-white font-extrabold text-xs px-5 py-2.5 rounded-xl cursor-pointer">Selesai</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -3879,17 +3991,20 @@ export default function PortalAdmin() {
                   {userList.filter(u => u.role === 'saka').map((usr) => {
                     const sakaItem = sakaList.find(s => s.id === usr.saka_id);
                     return (
-                      <div key={usr.email} className="p-4 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono">
+                      <div key={usr.user_id} className="p-4 bg-gray-50 border border-gray-150 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs font-mono">
                         <div>
                           <span className="bg-brand-brown-dark text-white font-bold px-2 py-0.5 rounded text-[8px] uppercase font-mono">
                             SAKA KABUPATEN
                           </span>
                           <h4 className="font-extrabold text-sm text-brand-brown-dark tracking-tight leading-none mt-2">{usr.nama}</h4>
-                          <p className="text-[10px] text-gray-400 mt-1">{usr.email}</p>
+                          <p className="text-[11px] text-gray-600 mt-1.5 flex items-center gap-1.5 break-all">
+                            <MailIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                            {usr.email || <span className="italic text-gray-400">email tidak ditemukan</span>}
+                          </p>
                         </div>
 
                           <button
-                            onClick={() => handleResetPassword(usr.user_id, usr.nama)}
+                            onClick={() => openResetModal(usr)}
                             className="bg-brand-orange/10 hover:bg-brand-orange/20 text-brand-orange border border-brand-orange/20 px-3 py-1 rounded-xl text-[10px] font-extrabold flex items-center gap-1 transition-colors shrink-0"
                           >
                             <Key className="w-3.5 h-3.5" /> Reset Password

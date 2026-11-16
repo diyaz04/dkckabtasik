@@ -157,7 +157,7 @@ export interface AgendaKegiatan {
 export interface FormFieldConfig {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'select' | 'textarea' | 'checkbox' | 'pangkalan' | 'date';
+  type: 'text' | 'number' | 'select' | 'textarea' | 'checkbox' | 'pangkalan' | 'date' | 'file'; // 'file' = upload berkas (Cloudinary, maks 2 MB, selalu wajib)
   required: boolean;
   options?: string[]; // For 'select' type
   locked?: boolean; // field inti: tidak bisa dihapus/diubah di form builder

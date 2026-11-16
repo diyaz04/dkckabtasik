@@ -131,3 +131,30 @@ export async function compressAndUploadToUploadcare(file: File): Promise<string>
   }
   return resData.url as string;
 }
+
+/** Batas ukuran lampiran form pendaftaran kegiatan (surat tugas / surat mandat dll). */
+export const MAX_FORM_FILE_BYTES = 2 * 1024 * 1024; // 2 MB
+export const FORM_FILE_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp';
+
+/**
+ * Upload lampiran form pendaftaran ke Cloudinary lewat /api/upload/form-file.
+ * Validasi: maks 2 MB, hanya PDF / JPG / PNG / WEBP. Gambar dikompres dulu, PDF dikirim apa adanya.
+ * Melempar Error berpesan Indonesia kalau tidak valid.
+ */
+export async function uploadFormFile(file: File): Promise<string> {
+  if (file.size > MAX_FORM_FILE_BYTES) {
+    throw new Error(`Ukuran berkas ${(file.size / 1024 / 1024).toFixed(2)} MB melebihi batas 2 MB.`);
+  }
+  const okType = file.type === 'application/pdf' || ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+  if (!okType) throw new Error('Format berkas harus PDF, JPG, PNG, atau WEBP.');
+
+  const dataUrl = file.type.startsWith('image/') ? await compressImage(file) : await readAsDataUrl(file);
+  const response = await fetch('/api/upload/form-file', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: dataUrl, name: file.name }),
+  });
+  const resData = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(resData?.error || 'Gagal mengunggah berkas');
+  return resData.url as string;
+}

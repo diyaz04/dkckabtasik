@@ -84,7 +84,7 @@ export default function BuktiPendaftaranPdfTemplate({
               <thead>
                 <tr className="border-b-2 border-black">
                   <th className="py-2 px-1 text-left w-8">No</th>
-                  {formFields.slice(0, 5).map(f => (
+                  {formFields.filter(f => f.type !== 'file').slice(0, 5).map(f => (
                     <th key={f.id} className="py-2 px-1 text-left">{f.label}</th>
                   ))}
                 </tr>
@@ -93,7 +93,7 @@ export default function BuktiPendaftaranPdfTemplate({
                 {kolektifPeserta.map((p, idx) => (
                   <tr key={idx} className="border-b border-gray-300 last:border-0">
                     <td className="py-2 px-1 font-bold">{idx + 1}</td>
-                    {formFields.slice(0, 5).map(f => (
+                    {formFields.filter(f => f.type !== 'file').slice(0, 5).map(f => (
                       <td key={f.id} className="py-2 px-1">{p[f.id] || '-'}</td>
                     ))}
                   </tr>
@@ -110,7 +110,7 @@ export default function BuktiPendaftaranPdfTemplate({
               {formFields.map(field => (
                 <tr key={field.id} className="border-b border-gray-100 last:border-0">
                   <td className="w-1/2 py-2 text-gray-700">{field.label}</td>
-                  <td className="w-1/2 py-2 font-bold">: {formData[field.id] || '-'}</td>
+                  <td className="w-1/2 py-2 font-bold">: {field.type === 'file' ? (formData[field.id] ? 'Berkas terlampir' : '-') : (formData[field.id] || '-')}</td>
                 </tr>
               ))}
             </tbody>
