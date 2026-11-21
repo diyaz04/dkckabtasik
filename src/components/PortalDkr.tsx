@@ -10,7 +10,9 @@ import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Search, Bell, Menu, BarChart2, FileText, Calendar, Users, Key, Save, Plus, Trash, Check, X, Building,
   Award, FileSpreadsheet, Edit3, Clock, ClipboardList, Printer, ChevronRight, ChevronLeft, AlertCircle, Copy
-, PanelLeft, Lock } from 'lucide-react';
+, PanelLeft, Lock, QrCode, Download } from 'lucide-react';
+import QRCode from 'react-qr-code';
+import { downloadQrCodeImage, downloadBothQrImages } from '../utils/qrDownload';
 import { 
   Kecamatan, Personalia, Berita, AgendaKegiatan, 
   Pangkalan, DataPotensial, DkrProfile, LaporanKegiatan
@@ -110,6 +112,7 @@ export default function PortalDkr() {
   const [addPesertaSaving, setAddPesertaSaving] = useState(false);
   const [addPesertaFormValues, setAddPesertaFormValues] = useState<any>({});
   const [selectedTagihan, setSelectedTagihan] = useState<any>(null);
+  const [selectedDkrQrModal, setSelectedDkrQrModal] = useState<{ reg: any } | null>(null);
   const [tagihanPeserta, setTagihanPeserta] = useState<any[]>([]);
   const [tagihanReceipt, setTagihanReceipt] = useState('');
   const [agendaFormSchema, setAgendaFormSchema] = useState<any[]>([]);
@@ -1615,6 +1618,13 @@ export default function PortalDkr() {
                                 <div className="flex items-center gap-3">
                                   <span className={p.data_peserta?._is_lunas ? 'text-brand-green font-bold' : 'text-amber-500'}>{p.data_peserta?._is_lunas ? 'Lunas' : 'Belum Lunas'}</span>
                                   <button 
+                                    onClick={() => setSelectedDkrQrModal({ reg: p })}
+                                    className="text-purple-600 hover:underline cursor-pointer flex items-center gap-1 font-bold"
+                                    title="Lihat & Unduh QR Code"
+                                  >
+                                    <QrCode className="w-3.5 h-3.5" /> QR
+                                  </button>
+                                  <button 
                                     onClick={async () => {
                                       const configRes = await fetch(`/api/agenda/${selectedTagihan.agenda_id}/config`);
                                       if (configRes.ok) {
@@ -2506,6 +2516,112 @@ export default function PortalDkr() {
       </div>
       
       
+      
+      {/* Modal QR Code Peserta DKR */}
+      {selectedDkrQrModal && (
+        <div className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col my-8">
+            <div className="p-5 border-b flex justify-between items-center bg-gray-50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-purple-50 text-purple-700 rounded-xl border border-purple-200">
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-brand-brown-dark text-base">
+                    {getPesertaName(selectedDkrQrModal.reg.data_peserta, agendaFormSchema)}
+                  </h3>
+                  <p className="text-[10px] text-gray-500 font-mono">
+                    ID: {selectedDkrQrModal.reg.id.slice(0, 8).toUpperCase()}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedDkrQrModal(null)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* QR Validasi */}
+                <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                  <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-2">QR Validasi</span>
+                  <div className="bg-white p-2.5 rounded-xl border border-blue-200 shadow-xs mb-2">
+                    <QRCode 
+                      id={`dkr-qr-val-${selectedDkrQrModal.reg.id}`} 
+                      value={`${window.location.origin}/#/validasi-pendaftaran/${selectedDkrQrModal.reg.id}`} 
+                      size={120} 
+                      level="M" 
+                    />
+                  </div>
+                  <p className="text-[9px] text-gray-500 mb-3">Scan via HP untuk cek keabsahan dokumen</p>
+                  <button
+                    onClick={() => downloadQrCodeImage(
+                      `dkr-qr-val-${selectedDkrQrModal.reg.id}`,
+                      `QR_Validasi_${getPesertaName(selectedDkrQrModal.reg.data_peserta, agendaFormSchema)}_${selectedDkrQrModal.reg.id.slice(0, 8)}`,
+                      {
+                        title: getPesertaName(selectedDkrQrModal.reg.data_peserta, agendaFormSchema),
+                        subtitle: 'Pendaftaran Kolektif DKR',
+                        badgeText: 'QR DOKUMEN VALIDASI',
+                        badgeColor: '#2563EB'
+                      }
+                    )}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Unduh Validasi
+                  </button>
+                </div>
+
+                {/* QR Check-in */}
+                <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-2">QR Check-in</span>
+                  <div className="bg-white p-2.5 rounded-xl border border-emerald-200 shadow-xs mb-2">
+                    <QRCode 
+                      id={`dkr-qr-chk-${selectedDkrQrModal.reg.id}`} 
+                      value={selectedDkrQrModal.reg.id} 
+                      size={120} 
+                      level="Q" 
+                    />
+                  </div>
+                  <p className="text-[9px] text-gray-500 mb-3">Tunjukkan di meja registrasi ulang</p>
+                  <button
+                    onClick={() => downloadQrCodeImage(
+                      `dkr-qr-chk-${selectedDkrQrModal.reg.id}`,
+                      `QR_Checkin_${getPesertaName(selectedDkrQrModal.reg.data_peserta, agendaFormSchema)}_${selectedDkrQrModal.reg.id.slice(0, 8)}`,
+                      {
+                        title: getPesertaName(selectedDkrQrModal.reg.data_peserta, agendaFormSchema),
+                        subtitle: 'Pendaftaran Kolektif DKR',
+                        badgeText: 'QR CHECK-IN KEHADIRAN',
+                        badgeColor: '#059669'
+                      }
+                    )}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Unduh Check-in
+                  </button>
+                </div>
+              </div>
+
+              {/* Unduh Keduanya */}
+              <div className="pt-2">
+                <button
+                  onClick={() => downloadBothQrImages(
+                    `dkr-qr-val-${selectedDkrQrModal.reg.id}`,
+                    `dkr-qr-chk-${selectedDkrQrModal.reg.id}`,
+                    getPesertaName(selectedDkrQrModal.reg.data_peserta, agendaFormSchema),
+                    'Kegiatan Kolektif DKR',
+                    'Peserta Kwarran',
+                    selectedDkrQrModal.reg.id
+                  )}
+                  className="w-full bg-brand-brown-dark hover:bg-brand-brown-dark/90 text-white font-extrabold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Unduh Kedua Kartu QR Sekaligus
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Tambah Peserta */}
       {showAddPesertaModal && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">

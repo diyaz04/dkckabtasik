@@ -27,7 +27,9 @@ import { compressAndUploadFile, compressAndUploadToUploadcare } from '../utils/i
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 const CheckinScanner = lazy(() => import('./CheckinScanner'));
-import { ScanLine, CheckCircle } from 'lucide-react';
+import { ScanLine, CheckCircle, QrCode } from 'lucide-react';
+import QRCode from 'react-qr-code';
+import { getPesertaDisplayName, downloadQrCodeImage, downloadBothQrImages } from '../utils/qrDownload';
 import GreetingBanner from './GreetingBanner';
 
 export default function PortalAdmin() {
@@ -228,6 +230,8 @@ export default function PortalAdmin() {
   const [agendaDashboardTab, setAgendaDashboardTab] = useState<'semua' | 'menunggu' | 'lunas' | 'checkin' | 'tagihan_kwarran'>('semua');
   const [viewRegistrant, setViewRegistrant] = useState<any | null>(null);
   const [tagihanKwarranList, setTagihanKwarranList] = useState<any[]>([]);
+  const [selectedQrModal, setSelectedQrModal] = useState<{ reg: any; type: 'validasi' | 'checkin' | 'all' } | null>(null);
+  const [isPrintQrSheetOpen, setIsPrintQrSheetOpen] = useState(false);
   
   // Tagihan Kolektif Action States
   const [isRejectTagihanModalOpen, setIsRejectTagihanModalOpen] = useState(false);
@@ -1041,9 +1045,16 @@ export default function PortalAdmin() {
   };
 
   const handleScanSuccess = async (decodedText: string) => {
-    // decodedText is the ID of the pendaftaran
+    // decodedText is the ID of the pendaftaran or full validation URL
+    let cleanId = decodedText.trim();
+    if (cleanId.includes('/validasi-pendaftaran/')) {
+      cleanId = cleanId.split('/validasi-pendaftaran/')[1].split('?')[0].split('/')[0];
+    } else if (cleanId.includes('/')) {
+      cleanId = cleanId.split('/').pop() || cleanId;
+    }
+
     try {
-      const res = await fetch(`/api/pendaftaran/checkin/${decodedText}`, {
+      const res = await fetch(`/api/pendaftaran/checkin/${cleanId}`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -2594,6 +2605,215 @@ export default function PortalAdmin() {
                         </div>
                       )}
 
+
+                      {/* MODAL QR CODE PESERTA LENGKAP */}
+                      {selectedQrModal && (
+                        <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl relative my-8">
+                            <button 
+                              onClick={() => setSelectedQrModal(null)} 
+                              className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+
+                            <div className="flex items-center gap-3 border-b pb-4 mb-5">
+                              <div className="p-3 bg-purple-50 text-purple-700 rounded-2xl border border-purple-200">
+                                <QrCode className="w-6 h-6" />
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-purple-600 font-mono font-bold uppercase tracking-wider block">
+                                  QR Code Pendaftaran & Presensi
+                                </span>
+                                <h3 className="font-extrabold text-xl text-brand-brown-dark tracking-tight">
+                                  {getPesertaDisplayName(selectedQrModal.reg.data_peserta, formFields)}
+                                </h3>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  {selectedDashboardAgenda?.nama_kegiatan} • {kecamatanList.find((k: any) => k.id === selectedQrModal.reg.kecamatan_id)?.nama_kecamatan || 'Peserta'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Grid 2 QR Codes */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                              {/* QR Validasi */}
+                              <div className="bg-blue-50/60 border-2 border-blue-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
+                                  <span className="text-xs font-black text-blue-700 uppercase tracking-wider">QR Validasi</span>
+                                </div>
+                                <div className="bg-white p-3 rounded-2xl border border-blue-200 shadow-sm mb-3">
+                                  <QRCode 
+                                    id={`modal-standalone-val-${selectedQrModal.reg.id}`} 
+                                    value={`${window.location.origin}/#/validasi-pendaftaran/${selectedQrModal.reg.id}`} 
+                                    size={140} 
+                                    level="M" 
+                                  />
+                                </div>
+                                <p className="text-[10px] text-gray-600 mb-3 px-1">
+                                  Scan via kamera HP untuk membuka halaman verifikasi keabsahan data resmi.
+                                </p>
+                                <div className="flex flex-col gap-2 w-full mt-auto">
+                                  <button
+                                    onClick={() => downloadQrCodeImage(
+                                      `modal-standalone-val-${selectedQrModal.reg.id}`,
+                                      `QR_Validasi_${getPesertaDisplayName(selectedQrModal.reg.data_peserta, formFields)}_${selectedQrModal.reg.id.slice(0, 8)}`,
+                                      {
+                                        title: getPesertaDisplayName(selectedQrModal.reg.data_peserta, formFields),
+                                        subtitle: `${selectedDashboardAgenda?.nama_kegiatan} • ${kecamatanList.find((k: any) => k.id === selectedQrModal.reg.kecamatan_id)?.nama_kecamatan || 'Peserta'}`,
+                                        badgeText: 'QR DOKUMEN VALIDASI',
+                                        badgeColor: '#2563EB'
+                                      }
+                                    )}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                                  >
+                                    <Download className="w-3.5 h-3.5" /> Unduh QR Validasi
+                                  </button>
+                                  <a
+                                    href={`${window.location.origin}/#/validasi-pendaftaran/${selectedQrModal.reg.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-full bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 font-bold text-[11px] py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                                  >
+                                    <Eye className="w-3 h-3" /> Buka Validasi
+                                  </a>
+                                </div>
+                              </div>
+
+                              {/* QR Check-in */}
+                              <div className="bg-emerald-50/60 border-2 border-emerald-200 rounded-2xl p-4 flex flex-col items-center text-center">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block"></span>
+                                  <span className="text-xs font-black text-emerald-700 uppercase tracking-wider">QR Check-in</span>
+                                </div>
+                                <div className="bg-white p-3 rounded-2xl border border-emerald-200 shadow-sm mb-3">
+                                  <QRCode 
+                                    id={`modal-standalone-chk-${selectedQrModal.reg.id}`} 
+                                    value={selectedQrModal.reg.id} 
+                                    size={140} 
+                                    level="Q" 
+                                  />
+                                </div>
+                                <p className="text-[10px] text-gray-600 mb-3 px-1">
+                                  Scan via kamera presensi / menu 'Scan Hadir' saat daftar ulang di lokasi.
+                                </p>
+                                <div className="flex flex-col gap-2 w-full mt-auto">
+                                  <button
+                                    onClick={() => downloadQrCodeImage(
+                                      `modal-standalone-chk-${selectedQrModal.reg.id}`,
+                                      `QR_Checkin_${getPesertaDisplayName(selectedQrModal.reg.data_peserta, formFields)}_${selectedQrModal.reg.id.slice(0, 8)}`,
+                                      {
+                                        title: getPesertaDisplayName(selectedQrModal.reg.data_peserta, formFields),
+                                        subtitle: `${selectedDashboardAgenda?.nama_kegiatan} • ${kecamatanList.find((k: any) => k.id === selectedQrModal.reg.kecamatan_id)?.nama_kecamatan || 'Peserta'}`,
+                                        badgeText: 'QR CHECK-IN KEHADIRAN',
+                                        badgeColor: '#059669'
+                                      }
+                                    )}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 px-3 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                                  >
+                                    <Download className="w-3.5 h-3.5" /> Unduh QR Check-in
+                                  </button>
+                                  {!selectedQrModal.reg.data_peserta?._is_hadir ? (
+                                    <button
+                                      onClick={async () => {
+                                        await handleScanSuccess(selectedQrModal.reg.id);
+                                        setSelectedQrModal(null);
+                                      }}
+                                      className="w-full bg-white hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold text-[11px] py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                    >
+                                      <Check className="w-3 h-3" /> Tandai Hadir Langsung
+                                    </button>
+                                  ) : (
+                                    <div className="w-full bg-emerald-100/70 text-emerald-800 font-bold text-[11px] py-1.5 px-3 rounded-xl flex items-center justify-center gap-1.5 border border-emerald-300">
+                                      <CheckCircle className="w-3 h-3" /> Sudah Check-in
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Action to download both */}
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
+                              <span className="text-xs text-gray-600 font-medium text-center sm:text-left">
+                                Download kedua kartu QR sekaligus ke perangkat:
+                              </span>
+                              <button
+                                onClick={() => downloadBothQrImages(
+                                  `modal-standalone-val-${selectedQrModal.reg.id}`,
+                                  `modal-standalone-chk-${selectedQrModal.reg.id}`,
+                                  getPesertaDisplayName(selectedQrModal.reg.data_peserta, formFields),
+                                  selectedDashboardAgenda?.nama_kegiatan || 'Kegiatan',
+                                  kecamatanList.find((k: any) => k.id === selectedQrModal.reg.kecamatan_id)?.nama_kecamatan || 'Peserta',
+                                  selectedQrModal.reg.id
+                                )}
+                                className="w-full sm:w-auto bg-brand-brown-dark hover:bg-brand-brown-dark/90 text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                              >
+                                <Download className="w-4 h-4" /> Unduh Keduanya
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* MODAL CETAK LEMBAR QR SELURUH PESERTA */}
+                      {isPrintQrSheetOpen && (
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+                          <div className="bg-white rounded-3xl p-6 max-w-4xl w-full shadow-2xl relative my-8 max-h-[90vh] flex flex-col">
+                            <div className="flex justify-between items-center border-b pb-4 shrink-0">
+                              <div>
+                                <span className="text-[10px] text-brand-green font-mono font-bold uppercase tracking-wider block">
+                                  Cetak Lembar Kartu QR ({filteredRegistrants.length} Peserta)
+                                </span>
+                                <h3 className="font-extrabold text-lg text-brand-brown-dark">
+                                  {selectedDashboardAgenda?.nama_kegiatan}
+                                </h3>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => window.print()}
+                                  className="bg-brand-green hover:bg-emerald-600 text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 shadow transition-colors cursor-pointer"
+                                >
+                                  <Printer className="w-4 h-4" /> Cetak / Print
+                                </button>
+                                <button 
+                                  onClick={() => setIsPrintQrSheetOpen(false)}
+                                  className="text-gray-400 hover:text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                                >
+                                  <X className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="overflow-y-auto flex-1 p-4 grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                              {filteredRegistrants.map((reg, idx) => (
+                                <div key={reg.id} className="border-2 border-gray-300 rounded-2xl p-4 bg-white flex flex-col justify-between">
+                                  <div className="border-b pb-2 mb-3">
+                                    <span className="text-[9px] font-bold text-gray-400 font-mono">NO. {idx + 1} • ID: {reg.id.slice(0, 8).toUpperCase()}</span>
+                                    <h4 className="font-bold text-sm text-gray-900 uppercase">{getPesertaDisplayName(reg.data_peserta, formFields)}</h4>
+                                    <p className="text-[11px] text-gray-600 font-medium">
+                                      {kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || 'Kwarran -'} • {reg.tipe?.toUpperCase()}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center justify-around gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                                    <div className="flex flex-col items-center">
+                                      <QRCode value={`${window.location.origin}/#/validasi-pendaftaran/${reg.id}`} size={80} level="M" />
+                                      <span className="text-[8px] font-bold text-blue-700 mt-1 uppercase">QR Validasi</span>
+                                    </div>
+                                    <div className="flex flex-col items-center">
+                                      <QRCode value={reg.id} size={80} level="Q" />
+                                      <span className="text-[8px] font-bold text-emerald-700 mt-1 uppercase">QR Check-in</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-[8px] text-gray-400 text-center mt-2 font-mono">
+                                    DKC KABUPATEN TASIKMALAYA
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* MODAL VIEW DETAIL PESERTA */}
                       {viewRegistrant && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
@@ -2642,6 +2862,96 @@ export default function PortalAdmin() {
                                   </div>
                                 </>
                               )}
+
+                              {/* QR CODES DALAM MODAL DETAIL */}
+                              <div className="mt-4 pt-4 border-t border-gray-100">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2.5 font-mono">
+                                  QR Code Validasi & Check-in
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {/* QR Validasi */}
+                                  <div className="bg-blue-50/60 border border-blue-200/80 rounded-2xl p-3 flex flex-col items-center text-center">
+                                    <span className="text-[10px] font-extrabold text-blue-700 uppercase tracking-wider mb-2">QR Validasi</span>
+                                    <div className="bg-white p-2 rounded-xl border border-blue-200 shadow-xs mb-2">
+                                      <QRCode 
+                                        id={`modal-qr-val-${viewRegistrant.id}`} 
+                                        value={`${window.location.origin}/#/validasi-pendaftaran/${viewRegistrant.id}`} 
+                                        size={100} 
+                                        level="M" 
+                                      />
+                                    </div>
+                                    <p className="text-[9px] text-gray-500 mb-2">Verifikasi Dokumen Pendaftaran</p>
+                                    <div className="flex gap-1.5 w-full">
+                                      <button
+                                        onClick={() => downloadQrCodeImage(
+                                          `modal-qr-val-${viewRegistrant.id}`,
+                                          `QR_Validasi_${getPesertaDisplayName(viewRegistrant.data_peserta, formFields)}_${viewRegistrant.id.slice(0, 8)}`,
+                                          {
+                                            title: getPesertaDisplayName(viewRegistrant.data_peserta, formFields),
+                                            subtitle: `${selectedDashboardAgenda.nama_kegiatan} • ${kecamatanList.find((k: any) => k.id === viewRegistrant.kecamatan_id)?.nama_kecamatan || 'Peserta'}`,
+                                            badgeText: 'QR DOKUMEN VALIDASI',
+                                            badgeColor: '#2563EB'
+                                          }
+                                        )}
+                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 shadow-xs transition-colors cursor-pointer"
+                                      >
+                                        <Download className="w-3 h-3" /> Unduh PNG
+                                      </button>
+                                      <a
+                                        href={`${window.location.origin}/#/validasi-pendaftaran/${viewRegistrant.id}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="bg-white hover:bg-blue-100 text-blue-700 border border-blue-300 font-bold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center transition-colors"
+                                        title="Buka halaman validasi"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  </div>
+
+                                  {/* QR Check-in */}
+                                  <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-3 flex flex-col items-center text-center">
+                                    <span className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider mb-2">QR Check-in</span>
+                                    <div className="bg-white p-2 rounded-xl border border-emerald-200 shadow-xs mb-2">
+                                      <QRCode 
+                                        id={`modal-qr-chk-${viewRegistrant.id}`} 
+                                        value={viewRegistrant.id} 
+                                        size={100} 
+                                        level="Q" 
+                                      />
+                                    </div>
+                                    <p className="text-[9px] text-gray-500 mb-2">Presensi Kehadiran di Lokasi</p>
+                                    <div className="flex gap-1.5 w-full">
+                                      <button
+                                        onClick={() => downloadQrCodeImage(
+                                          `modal-qr-chk-${viewRegistrant.id}`,
+                                          `QR_Checkin_${getPesertaDisplayName(viewRegistrant.data_peserta, formFields)}_${viewRegistrant.id.slice(0, 8)}`,
+                                          {
+                                            title: getPesertaDisplayName(viewRegistrant.data_peserta, formFields),
+                                            subtitle: `${selectedDashboardAgenda.nama_kegiatan} • ${kecamatanList.find((k: any) => k.id === viewRegistrant.kecamatan_id)?.nama_kecamatan || 'Peserta'}`,
+                                            badgeText: 'QR CHECK-IN KEHADIRAN',
+                                            badgeColor: '#059669'
+                                          }
+                                        )}
+                                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 shadow-xs transition-colors cursor-pointer"
+                                      >
+                                        <Download className="w-3 h-3" /> Unduh PNG
+                                      </button>
+                                      {!viewRegistrant.data_peserta?._is_hadir && (
+                                        <button
+                                          onClick={async () => {
+                                            await handleScanSuccess(viewRegistrant.id);
+                                          }}
+                                          className="bg-white hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center transition-colors cursor-pointer"
+                                          title="Tandai Hadir Sekarang"
+                                        >
+                                          <Check className="w-3 h-3" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                             
                             {selectedDashboardAgenda.is_camp_fee_required && !viewRegistrant.data_peserta?._is_lunas && (
@@ -2747,6 +3057,13 @@ export default function PortalAdmin() {
                             className="bg-brand-brown-dark hover:bg-brand-brown-dark/90 text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
                           >
                             <ScanLine className="w-4 h-4" /> Scan Hadir
+                          </button>
+                          <button
+                            onClick={() => setIsPrintQrSheetOpen(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2 cursor-pointer shadow transition-colors"
+                            title="Cetak lembar kartu QR seluruh peserta terkonfirmasi"
+                          >
+                            <Printer className="w-4 h-4" /> Cetak Semua QR
                           </button>
                           <button
                             onClick={handleExportExcel}
@@ -2984,32 +3301,144 @@ export default function PortalAdmin() {
                           </div>
                         ) : filteredRegistrants.length > 0 ? (
                           <div className="space-y-3 font-mono text-xs text-gray-700">
-                            {filteredRegistrants.map((reg, idx) => (
-                              <div key={reg.id} className="p-4 bg-white border rounded-xl border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:border-brand-green/30 transition-colors">
-                                <div className="flex-1 w-full">
-                                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                                    <span className="font-bold text-sm text-brand-brown-dark uppercase">{reg.data_peserta[formFields[0]?.id] || 'Peserta'}</span>
-                                    <span className="text-[9px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 uppercase">{reg.tipe}</span>
-                                    {reg.data_peserta?._is_hadir && <span className="bg-brand-green/10 text-brand-green px-2 py-0.5 rounded text-[9px] uppercase font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Check-in</span>}
-                                    {selectedDashboardAgenda.is_camp_fee_required && reg.data_peserta?._is_lunas && <span className="bg-blue-500/10 text-blue-600 px-2 py-0.5 rounded text-[9px] uppercase font-bold">Lunas</span>}
+                            {filteredRegistrants.map((reg, idx) => {
+                              const pesertaName = getPesertaDisplayName(reg.data_peserta, formFields);
+                              const kwarranName = kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id || 'Kwarran -';
+                              const valUrl = `${window.location.origin}/#/validasi-pendaftaran/${reg.id}`;
+
+                              return (
+                                <div key={reg.id} className="p-4 bg-white border rounded-2xl border-gray-200 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 hover:border-brand-green/30 hover:shadow-md transition-all">
+                                  {/* Left: Participant Info */}
+                                  <div className="flex-1 w-full min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                      <span className="font-extrabold text-sm text-brand-brown-dark uppercase tracking-tight">
+                                        {pesertaName}
+                                      </span>
+                                      <span className="text-[9px] bg-gray-100 font-bold px-2 py-0.5 rounded text-gray-600 uppercase">
+                                        {reg.tipe}
+                                      </span>
+                                      {reg.data_peserta?._is_hadir ? (
+                                        <span className="bg-brand-green/10 text-brand-green border border-brand-green/20 px-2 py-0.5 rounded text-[9px] uppercase font-bold flex items-center gap-1">
+                                          <CheckCircle className="w-3 h-3" /> Hadir / Check-in
+                                        </span>
+                                      ) : (
+                                        <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[9px] uppercase font-bold">
+                                          Belum Hadir
+                                        </span>
+                                      )}
+                                      {selectedDashboardAgenda.is_camp_fee_required && (
+                                        reg.data_peserta?._is_lunas ? (
+                                          <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] uppercase font-bold">
+                                            Lunas
+                                          </span>
+                                        ) : (
+                                          <span className="bg-amber-500/10 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded text-[9px] uppercase font-bold">
+                                            Belum Lunas
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                      {reg.kecamatan_id && (
+                                        <span className="font-semibold text-gray-600">
+                                          📍 {kwarranName}
+                                        </span>
+                                      )}
+                                      <span>🕒 {new Date(reg.created_at).toLocaleString('id-ID')}</span>
+                                      <span className="font-mono text-gray-400">ID: {reg.id.split('-')[0].toUpperCase()}</span>
+                                    </div>
                                   </div>
-                                  <div className="text-[10px] text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
-                                    {reg.kecamatan_id && <span>📍 {kecamatanList.find((k: any) => k.id === reg.kecamatan_id)?.nama_kecamatan || reg.kecamatan_id}</span>}
-                                    <span>🕒 {new Date(reg.created_at).toLocaleString('id-ID')}</span>
+
+                                  {/* Middle: QR Codes Validasi & Checkin */}
+                                  <div className="flex items-center gap-3 bg-gray-50/90 p-2.5 rounded-xl border border-gray-200/80 shrink-0 self-stretch sm:self-auto justify-center">
+                                    {/* QR Validasi */}
+                                    <div className="flex flex-col items-center bg-white p-1.5 rounded-lg border border-gray-200/60 shadow-xs">
+                                      <div 
+                                        onClick={() => setSelectedQrModal({ reg, type: 'validasi' })}
+                                        className="cursor-pointer hover:opacity-80 transition-opacity bg-white p-1 rounded"
+                                        title="Klik untuk melihat QR Validasi lebih besar"
+                                      >
+                                        <QRCode 
+                                          id={`row-qr-val-${reg.id}`} 
+                                          value={valUrl} 
+                                          size={54} 
+                                          level="M" 
+                                        />
+                                      </div>
+                                      <span className="text-[8px] font-bold text-blue-600 mt-1 uppercase tracking-tight">QR Validasi</span>
+                                      <button
+                                        onClick={() => downloadQrCodeImage(
+                                          `row-qr-val-${reg.id}`,
+                                          `QR_Validasi_${pesertaName}_${reg.id.slice(0, 8)}`,
+                                          {
+                                            title: pesertaName,
+                                            subtitle: `${selectedDashboardAgenda.nama_kegiatan} • ${kwarranName}`,
+                                            badgeText: 'QR DOKUMEN VALIDASI',
+                                            badgeColor: '#2563EB'
+                                          }
+                                        )}
+                                        className="mt-1 text-[8px] bg-blue-50 hover:bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
+                                        title="Download QR Validasi (PNG)"
+                                      >
+                                        <Download className="w-2.5 h-2.5" /> Unduh
+                                      </button>
+                                    </div>
+
+                                    {/* QR Check-in */}
+                                    <div className="flex flex-col items-center bg-white p-1.5 rounded-lg border border-gray-200/60 shadow-xs">
+                                      <div 
+                                        onClick={() => setSelectedQrModal({ reg, type: 'checkin' })}
+                                        className="cursor-pointer hover:opacity-80 transition-opacity bg-white p-1 rounded"
+                                        title="Klik untuk melihat QR Check-in lebih besar"
+                                      >
+                                        <QRCode 
+                                          id={`row-qr-chk-${reg.id}`} 
+                                          value={reg.id} 
+                                          size={54} 
+                                          level="Q" 
+                                        />
+                                      </div>
+                                      <span className="text-[8px] font-bold text-emerald-600 mt-1 uppercase tracking-tight">QR Check-in</span>
+                                      <button
+                                        onClick={() => downloadQrCodeImage(
+                                          `row-qr-chk-${reg.id}`,
+                                          `QR_Checkin_${pesertaName}_${reg.id.slice(0, 8)}`,
+                                          {
+                                            title: pesertaName,
+                                            subtitle: `${selectedDashboardAgenda.nama_kegiatan} • ${kwarranName}`,
+                                            badgeText: 'QR CHECK-IN KEHADIRAN',
+                                            badgeColor: '#059669'
+                                          }
+                                        )}
+                                        className="mt-1 text-[8px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
+                                        title="Download QR Check-in (PNG)"
+                                      >
+                                        <Download className="w-2.5 h-2.5" /> Unduh
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="flex gap-2 shrink-0">
-                                  <button onClick={() => setViewRegistrant(reg)} className="bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
-                                    <Eye className="w-3 h-3" /> Detail
-                                  </button>
-                                  {selectedDashboardAgenda.is_camp_fee_required && !reg.data_peserta?._is_lunas && (
-                                    <button onClick={() => handleMarkLunas(reg.id)} className="bg-amber-100 hover:bg-amber-200 text-amber-600 border border-amber-200 text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
-                                      <Check className="w-3 h-3" /> Lunas
+
+                                  {/* Right: Actions */}
+                                  <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 items-center">
+                                    <button 
+                                      onClick={() => setSelectedQrModal({ reg, type: 'all' })}
+                                      className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-2 rounded-xl flex items-center gap-1 transition-colors cursor-pointer"
+                                      title="Lihat & Unduh QR Lengkap"
+                                    >
+                                      <QrCode className="w-3.5 h-3.5" /> QR Code
                                     </button>
-                                  )}
+                                    <button onClick={() => setViewRegistrant(reg)} className="bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal text-[10px] font-bold px-3 py-2 rounded-xl flex items-center gap-1 transition-colors cursor-pointer">
+                                      <Eye className="w-3.5 h-3.5" /> Detail
+                                    </button>
+                                    {selectedDashboardAgenda.is_camp_fee_required && !reg.data_peserta?._is_lunas && (
+                                      <button onClick={() => handleMarkLunas(reg.id)} className="bg-amber-100 hover:bg-amber-200 text-amber-600 border border-amber-200 text-[10px] font-bold px-3 py-2 rounded-xl flex items-center gap-1 transition-colors cursor-pointer">
+                                        <Check className="w-3.5 h-3.5" /> Lunas
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         ) : (
                           <p className="text-sm text-gray-500 italic p-8 text-center bg-gray-50 rounded-2xl border border-dashed">Belum ada peserta di kategori ini.</p>
